@@ -1,0 +1,20 @@
+{
+  "profiles": {
+    "RoslynMCP.MCP (HTTP)": {
+      "commandName": "Project",
+      "commandLineArgs": "--http",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    "RoslynMCP.MCP (HTTP with custom solution)": {
+      "commandName": "Project",
+      "commandLineArgs": "--http",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ROSLYN_MCP_SOLUTION_PATH": "D:\\RoslynMCP\\RoslynMCP.sln",
+        "ROSLYN_MCP_NAMESPACE_PREFIXES": "RoslynMCP"
+      }
+    }
+  }
+}

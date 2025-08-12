@@ -1,0 +1,49 @@
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{4C26868E-5E7C-4A04-91F7-8C6F82F8B7E5}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{1A2B3C4D-5E6F-7A8B-9C0D-E1F2A3B4C5D6}"
+	ProjectSection(SolutionItems) = preProject
+		README.md = README.md
+	EndProjectSection
+EndProject
+
+# Core Projects
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RoslynMCP.SymbolCache", "src\RoslynMCP.SymbolCache\RoslynMCP.SymbolCache.csproj", "{B2C3D4E5-F6A7-8B9C-0D1E-F2A3B4C5D6E7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RoslynMCP.Query", "src\RoslynMCP.Query\RoslynMCP.Query.csproj", "{C3D4E5F6-A7B8-9C0D-1E2F-A3B4C5D6E7F8}"
+EndProject
+
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RoslynMCP.MCP", "src\RoslynMCP.MCP\RoslynMCP.MCP.csproj", "{E5F6A7B8-C9D0-1E2F-3A4B-C5D6E7F8A9B0}"
+EndProject
+
+
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B2C3D4E5-F6A7-8B9C-0D1E-F2A3B4C5D6E7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B2C3D4E5-F6A7-8B9C-0D1E-F2A3B4C5D6E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B2C3D4E5-F6A7-8B9C-0D1E-F2A3B4C5D6E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B2C3D4E5-F6A7-8B9C-0D1E-F2A3B4C5D6E7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C3D4E5F6-A7B8-9C0D-1E2F-A3B4C5D6E7F8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C3D4E5F6-A7B8-9C0D-1E2F-A3B4C5D6E7F8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C3D4E5F6-A7B8-9C0D-1E2F-A3B4C5D6E7F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C3D4E5F6-A7B8-9C0D-1E2F-A3B4C5D6E7F8}.Release|Any CPU.Build.0 = Release|Any CPU
+
+		{E5F6A7B8-C9D0-1E2F-3A4B-C5D6E7F8A9B0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E5F6A7B8-C9D0-1E2F-3A4B-C5D6E7F8A9B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E5F6A7B8-C9D0-1E2F-3A4B-C5D6E7F8A9B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E5F6A7B8-C9D0-1E2F-3A4B-C5D6E7F8A9B0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{B2C3D4E5-F6A7-8B9C-0D1E-F2A3B4C5D6E7} = {4C26868E-5E7C-4A04-91F7-8C6F82F8B7E5}
+		{C3D4E5F6-A7B8-9C0D-1E2F-A3B4C5D6E7F8} = {4C26868E-5E7C-4A04-91F7-8C6F82F8B7E5}
+		{E5F6A7B8-C9D0-1E2F-3A4B-C5D6E7F8A9B0} = {4C26868E-5E7C-4A04-91F7-8C6F82F8B7E5}
+	EndGlobalSection
+EndGlobal
