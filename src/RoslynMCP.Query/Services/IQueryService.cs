@@ -4,102 +4,102 @@ using RoslynMCP.Core.Interfaces;
 namespace RoslynMCP.Query.Services
 {
     /// <summary>
-    /// 基础查询服务接口 - 仅提供基础的Roslyn查询功能
+    /// Basic query service interface - provides only basic Roslyn query functionality
     /// </summary>
     public interface IQueryService
     {
         /// <summary>
-        /// 使用预构建的符号缓存初始化查询服务
+        /// Initialize query service with pre-built symbol cache
         /// </summary>
         Task<bool> InitializeAsync(ISymbolCacheService symbolCache, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// 搜索符号
+        /// Search symbols
         /// </summary>
         Task<IEnumerable<SymbolSearchResult>> SearchSymbolsAsync(SymbolSearchRequest request, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// 查找引用
+        /// Find references
         /// </summary>
         Task<IEnumerable<ReferenceLocation>> FindReferencesAsync(string symbolName, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// 获取符号详细信息
+        /// Get symbol details
         /// </summary>
         Task<SymbolDetails?> GetSymbolDetailsAsync(string symbolName, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// 获取解决方案中的所有项目
+        /// Get all projects in the solution
         /// </summary>
         Task<IEnumerable<ProjectInfo>> GetProjectsAsync(CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// 获取项目中的所有符号
+        /// Get all symbols in a project
         /// </summary>
         Task<IEnumerable<INamedTypeSymbol>> GetProjectSymbolsAsync(string projectName, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// 获取项目的依赖关系
+        /// Get project dependencies
         /// </summary>
         Task<ProjectInfo?> GetProjectDependenciesAsync(string projectName, CancellationToken cancellationToken = default);
 
 
         /// <summary>
-        /// 检查服务是否已初始化
+        /// Check if service is initialized
         /// </summary>
         bool IsInitialized { get; }
 
         /// <summary>
-        /// 获取当前解决方案路径
+        /// Get current solution path
         /// </summary>
         string? SolutionPath { get; }
 
         /// <summary>
-        /// 获取解决方案对象（供上层使用）
+        /// Get solution object (for upper layer use)
         /// </summary>
         Solution? Solution { get; }
 
         /// <summary>
-        /// 获取符号的源代码
+        /// Get source code of symbol
         /// </summary>
         Task<string?> GetSourceCodeAsync(string symbolName, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// 获取文件的源代码
+        /// Get file source code
         /// </summary>
         Task<string?> GetFileContentAsync(string filePath, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// 获取所有符号的只读字典（供图分析器使用）
+        /// Get read-only dictionary of all symbols (for graph analyzer use)
         /// </summary>
         IReadOnlyDictionary<string, ISymbol>? AllSymbols { get; }
 
         /// <summary>
-        /// 获取Proto符号的只读字典（供图分析器使用）
+        /// Get read-only dictionary of Proto symbols (for graph analyzer use)
         /// </summary>
         IReadOnlyDictionary<string, INamedTypeSymbol>? ProtoSymbols { get; }
 
         /// <summary>
-        /// 获取符号缓存服务（供需要直接访问的场景使用）
+        /// Get symbol cache service (for scenarios requiring direct access)
         /// </summary>
         ISymbolCacheService? SymbolCacheService { get; }
 
         /// <summary>
-        /// 通过名称查找方法符号（可能返回多个重载）
+        /// Find method symbols by name (may return multiple overloads)
         /// </summary>
-        /// <param name="methodName">要搜索的方法名</param>
-        /// <param name="projectName">可选。要将搜索范围限定到的项目名称</param>
-        /// <param name="cancellationToken">取消令牌</param>
+        /// <param name="methodName">Method name to search</param>
+        /// <param name="projectName">Optional. Project name to limit search scope to</param>
+        /// <param name="cancellationToken">Cancellation token</param>
         Task<IEnumerable<IMethodSymbol>> FindMethodSymbolsAsync(string methodName, string? projectName = null, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// 释放资源
+        /// Release resources
         /// </summary>
         void Dispose();
     }
 
     /// <summary>
-    /// 项目信息
+    /// Project information
     /// </summary>
     public class ProjectInfo
     {
@@ -112,7 +112,7 @@ namespace RoslynMCP.Query.Services
     }
 
     /// <summary>
-    /// 符号详细信息
+    /// Symbol details
     /// </summary>
     public class SymbolDetails
     {
@@ -130,7 +130,7 @@ namespace RoslynMCP.Query.Services
     }
 
     /// <summary>
-    /// 符号搜索结果
+    /// Symbol search result
     /// </summary>
     public class SymbolSearchResult
     {
@@ -148,7 +148,7 @@ namespace RoslynMCP.Query.Services
     }
 
     /// <summary>
-    /// 符号搜索请求
+    /// Symbol search request
     /// </summary>
     public class SymbolSearchRequest
     {
@@ -161,7 +161,7 @@ namespace RoslynMCP.Query.Services
     }
 
     /// <summary>
-    /// 引用位置
+    /// Reference location
     /// </summary>
     public class ReferenceLocation
     {

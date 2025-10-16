@@ -6,7 +6,7 @@ using RoslynMCP.Core.Interfaces;
 namespace RoslynMCP.Analysis.Services
 {
     /// <summary>
-    /// 高级分析服务实现 - 基于Query服务构建复杂分析功能
+    /// Advanced analysis service implementation - builds complex analysis functions based on Query service
     /// </summary>
     public class AnalysisService : IAnalysisService, IDisposable
     {
@@ -29,27 +29,27 @@ namespace RoslynMCP.Analysis.Services
         {
             try
             {
-                _logger.LogInformation("初始化分析服务");
+                _logger.LogInformation("Initializing analysis service");
 
-                // 检查 QueryService 是否已经初始化
+                // Check if QueryService has been initialized
                 if (!_queryService.IsInitialized)
                 {
-                    _logger.LogError("查询服务未初始化，请先初始化 QueryService");
+                    _logger.LogError("Query service not initialized, please initialize QueryService first");
                     return false;
                 }
 
                 if (_queryService.SymbolCacheService == null)
                 {
-                    _logger.LogError("查询服务中的符号缓存服务不可用");
+                    _logger.LogError("Symbol cache service in query service is unavailable");
                     return false;
                 }
 
-                _logger.LogInformation("分析服务初始化完成");
+                _logger.LogInformation("Analysis service initialization completed");
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "分析服务初始化失败");
+                _logger.LogError(ex, "Analysis service initialization failed");
                 return false;
             }
         }
@@ -59,7 +59,7 @@ namespace RoslynMCP.Analysis.Services
         {
             if (!IsInitialized)
             {
-                throw new InvalidOperationException("分析服务未初始化，请先调用 InitializeAsync");
+                throw new InvalidOperationException("Analysis service not initialized, please call InitializeAsync first");
             }
         }
 
@@ -152,7 +152,7 @@ namespace RoslynMCP.Analysis.Services
                 return Enumerable.Empty<MethodInvocation>();
             }
             
-            // 如果找到多个重载，记录下来
+            // If multiple overloads are found, record them
             var symbolList = methodSymbols.ToList();
             if (symbolList.Count > 1)
             {
@@ -168,7 +168,7 @@ namespace RoslynMCP.Analysis.Services
             }
 
             var methodNode = await syntaxRef.GetSyntaxAsync(cancellationToken);
-            // 通过语法树查找项目，这比通过程序集名称匹配更可靠
+            // Find project through syntax tree, this is more reliable than matching by assembly name
             var document = _queryService.Solution.GetDocument(syntaxRef.SyntaxTree);
             if (document == null)
             {
@@ -194,7 +194,7 @@ namespace RoslynMCP.Analysis.Services
                 var invokedSymbolInfo = semanticModel.GetSymbolInfo(invocation, cancellationToken);
                 var invokedSymbol = invokedSymbolInfo.Symbol as IMethodSymbol;
                 
-                // 也处理候选符号
+                // Also handle candidate symbols
                 if (invokedSymbol == null && invokedSymbolInfo.CandidateSymbols.Any())
                 {
                     invokedSymbol = invokedSymbolInfo.CandidateSymbols.FirstOrDefault() as IMethodSymbol;

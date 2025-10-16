@@ -1,38 +1,38 @@
 #!/bin/bash
-# RoslynMCP 编译和部署脚本 (Linux/Mac)
-# 使用方法: ./build-and-deploy.sh [release|debug] [self-contained] [runtime]
+# RoslynMCP build and deploy script (Linux/Mac)
+# Usage: ./build-and-deploy.sh [release|debug] [self-contained] [runtime]
 
 CONFIGURATION=${1:-Release}
 SELF_CONTAINED=${2:-false}
 SINGLE_FILE=${3:-false}
 RUNTIME=${4:-linux-x64}
 
-# 如果是 Mac，设置默认运行时
+# If it's Mac, set default runtime
 if [[ "$OSTYPE" == "darwin"* ]]; then
     RUNTIME=${4:-osx-x64}
 fi
 
-echo "🔨 开始编译 RoslynMCP..."
+echo "🔨 Starting compilation of RoslynMCP..."
 
-# 清理之前的构建
-echo "🧹 清理之前的构建..."
+# Clean previous builds
+echo "🧹 Cleaning previous builds..."
 dotnet clean
 
-# 编译项目
-echo "🔧 编译项目 ($CONFIGURATION 配置)..."
+# Build project
+echo "🔧 Building project ($CONFIGURATION configuration)..."
 dotnet build -c "$CONFIGURATION"
 if [ $? -ne 0 ]; then
-    echo "❌ 编译失败!"
+    echo "❌ Build failed!"
     exit 1
 fi
 
-# 发布项目
-echo "📦 发布项目..."
-# 创建输出目录
+# Publish project
+echo "📦 Publishing project..."
+# Create output directory
 OUTPUT_DIR="release"
 mkdir -p "$OUTPUT_DIR"
 
-# 构建发布参数
+# Build publish arguments
 PUBLISH_ARGS="src/RoslynMCP.MCP/RoslynMCP.MCP.csproj -c $CONFIGURATION"
 FOLDER_NAME="framework-dependent"
 
@@ -56,16 +56,16 @@ PUBLISH_PATH="$OUTPUT_DIR/$FOLDER_NAME"
 dotnet publish $PUBLISH_ARGS
 
 if [ $? -ne 0 ]; then
-    echo "❌ 发布失败!"
+    echo "❌ Publish failed!"
     exit 1
 fi
 
-echo "✅ 编译和发布完成!"
-echo "📂 发布路径: $PUBLISH_PATH"
+echo "✅ Build and publish completed!"
+echo "📂 Publish path: $PUBLISH_PATH"
 
-# 显示配置示例
+# Display configuration example
 echo ""
-echo "📋 MCP 客户端配置示例:"
+echo "📋 MCP client configuration example:"
 FULL_PATH=$(realpath "$PUBLISH_PATH")
 
 if [ "$SINGLE_FILE" = "true" ] || [ "$SELF_CONTAINED" = "true" ]; then
@@ -108,11 +108,11 @@ EOF
 fi
 
 echo ""
-echo "💡 提示:"
-echo "- 将上述配置中的路径替换为您的实际路径"
+echo "💡 Tips:"
+echo "- Replace the paths in the above configuration with your actual paths"
 if [ "$SELF_CONTAINED" != "true" ] && [ "$SINGLE_FILE" != "true" ]; then
-    echo "- 如需自包含版本（不依赖系统.NET），请使用: ./build-and-deploy.sh $CONFIGURATION true false $RUNTIME"
-    echo "- 如需单文件版本（推荐），请使用: ./build-and-deploy.sh $CONFIGURATION true true $RUNTIME"
+    echo "- For self-contained version (no dependency on system .NET), use: ./build-and-deploy.sh $CONFIGURATION true false $RUNTIME"
+    echo "- For single-file version (recommended), use: ./build-and-deploy.sh $CONFIGURATION true true $RUNTIME"
 elif [ "$SINGLE_FILE" = "true" ]; then
-    echo "- 单文件版本：一个可执行文件包含所有内容，便于分发！"
+    echo "- Single-file version: One executable contains all content, easy to distribute!"
 fi

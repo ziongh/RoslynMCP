@@ -5,7 +5,7 @@ using System.Text.Json;
 namespace RoslynMCP.SymbolCache.Diagnostics
 {
     /// <summary>
-    /// 诊断日志器，用于性能监控和错误追踪
+    /// Diagnostic logger for performance monitoring and error tracking
     /// </summary>
     public class DiagnosticLogger
     {
@@ -17,7 +17,7 @@ namespace RoslynMCP.SymbolCache.Diagnostics
         }
         
         /// <summary>
-        /// 带性能监控的操作执行
+        /// Operation execution with performance monitoring
         /// </summary>
         public async Task<T> LoggedExecutionAsync<T>(
             string operationName, 
@@ -28,7 +28,7 @@ namespace RoslynMCP.SymbolCache.Diagnostics
             var operationId = Guid.NewGuid().ToString("N")[..8];
             
             _logger.LogInformation(
-                "开始执行 {OperationName} [{OperationId}] 参数: {Parameters}",
+                "Starting execution {OperationName} [{OperationId}] Parameters: {Parameters}",
                 operationName, operationId, JsonSerializer.Serialize(parameters));
             
             try
@@ -36,7 +36,7 @@ namespace RoslynMCP.SymbolCache.Diagnostics
                 var result = await operation();
                 
                 _logger.LogInformation(
-                    "执行完成 {OperationName} [{OperationId}] 耗时: {ElapsedMs}ms",
+                    "Execution completed {OperationName} [{OperationId}] Elapsed: {ElapsedMs}ms",
                     operationName, operationId, stopwatch.ElapsedMilliseconds);
                 
                 return result;
@@ -44,14 +44,14 @@ namespace RoslynMCP.SymbolCache.Diagnostics
             catch (Exception ex)
             {
                 _logger.LogError(ex,
-                    "执行失败 {OperationName} [{OperationId}] 耗时: {ElapsedMs}ms",
+                    "Execution failed {OperationName} [{OperationId}] Elapsed: {ElapsedMs}ms",
                     operationName, operationId, stopwatch.ElapsedMilliseconds);
                 throw;
             }
         }
 
         /// <summary>
-        /// 同步版本的带性能监控的操作执行
+        /// Synchronous version of operation execution with performance monitoring
         /// </summary>
         public T LoggedExecution<T>(
             string operationName, 
@@ -62,7 +62,7 @@ namespace RoslynMCP.SymbolCache.Diagnostics
             var operationId = Guid.NewGuid().ToString("N")[..8];
             
             _logger.LogInformation(
-                "开始执行 {OperationName} [{OperationId}] 参数: {Parameters}",
+                "Starting execution {OperationName} [{OperationId}] Parameters: {Parameters}",
                 operationName, operationId, JsonSerializer.Serialize(parameters));
             
             try
@@ -70,7 +70,7 @@ namespace RoslynMCP.SymbolCache.Diagnostics
                 var result = operation();
                 
                 _logger.LogInformation(
-                    "执行完成 {OperationName} [{OperationId}] 耗时: {ElapsedMs}ms",
+                    "Execution completed {OperationName} [{OperationId}] Elapsed: {ElapsedMs}ms",
                     operationName, operationId, stopwatch.ElapsedMilliseconds);
                 
                 return result;
@@ -78,24 +78,24 @@ namespace RoslynMCP.SymbolCache.Diagnostics
             catch (Exception ex)
             {
                 _logger.LogError(ex,
-                    "执行失败 {OperationName} [{OperationId}] 耗时: {ElapsedMs}ms",
+                    "Execution failed {OperationName} [{OperationId}] Elapsed: {ElapsedMs}ms",
                     operationName, operationId, stopwatch.ElapsedMilliseconds);
                 throw;
             }
         }
 
         /// <summary>
-        /// 记录缓存统计信息
+        /// Log cache statistics information
         /// </summary>
         public void LogCacheStatistics(string cacheName, int hitCount, int missCount, double hitRatio)
         {
             _logger.LogInformation(
-                "缓存统计 {CacheName}: 命中={HitCount}, 未命中={MissCount}, 命中率={HitRatio:P2}",
+                "Cache statistics {CacheName}: Hits={HitCount}, Misses={MissCount}, Hit ratio={HitRatio:P2}",
                 cacheName, hitCount, missCount, hitRatio);
         }
 
         /// <summary>
-        /// 记录内存使用情况
+        /// Log memory usage information
         /// </summary>
         public void LogMemoryUsage()
         {
@@ -104,7 +104,7 @@ namespace RoslynMCP.SymbolCache.Diagnostics
             var privateMemory = process.PrivateMemorySize64;
             
             _logger.LogInformation(
-                "内存使用: 工作集={WorkingSetMB}MB, 私有内存={PrivateMemoryMB}MB",
+                "Memory usage: Working set={WorkingSetMB}MB, Private memory={PrivateMemoryMB}MB",
                 workingSet / 1024 / 1024, privateMemory / 1024 / 1024);
         }
     }

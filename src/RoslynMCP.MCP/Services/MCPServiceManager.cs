@@ -11,55 +11,55 @@ using System.Text;
 namespace RoslynMCP.MCP.Services
 {
     /// <summary>
-    /// MCP应用级服务管理器 - 协调解决方案状态管理器和应用服务
+    /// MCP application-level service manager - coordinates solution state manager and application services
     /// </summary>
     public interface IMCPServiceManager
     {
         /// <summary>
-        /// 当前解决方案路径
+        /// Current solution path
         /// </summary>
         string? CurrentSolutionPath { get; }
 
         /// <summary>
-        /// 解决方案是否已加载并且服务已初始化
+        /// Whether the solution is loaded and services are initialized
         /// </summary>
         bool IsLoaded { get; }
 
         /// <summary>
-        /// 服务是否已初始化
+        /// Whether services are initialized
         /// </summary>
         bool IsServicesInitialized { get; }
 
         /// <summary>
-        /// 获取符号缓存服务
+        /// Get symbol cache service
         /// </summary>
         Core.Interfaces.ISymbolCacheService? SymbolCache { get; }
 
         /// <summary>
-        /// 加载解决方案并初始化所有相关服务
+        /// Load solution and initialize all related services
         /// </summary>
-        /// <param name="solutionPath">解决方案路径</param>
-        /// <param name="namespacePrefixes">要包含的命名空间前缀列表</param>
-        /// <returns>加载结果消息</returns>
+        /// <param name="solutionPath">Solution path</param>
+        /// <param name="namespacePrefixes">List of namespace prefixes to include</param>
+        /// <returns>Loading result message</returns>
         Task<string> LoadSolutionAsync(string solutionPath, List<string>? namespacePrefixes = null);
 
         /// <summary>
-        /// 获取当前解决方案状态
+        /// Get current solution status
         /// </summary>
-        /// <returns>状态信息</returns>
+        /// <returns>Status information</returns>
         string GetStatus();
         
         /// <summary>
-        /// 获取当前解决方案状态，如果正在加载则等待加载完成
+        /// Get current solution status, wait for loading to complete if in progress
         /// </summary>
-        /// <param name="waitForLoading">是否等待正在进行的加载操作</param>
-        /// <param name="maxWaitMs">最大等待时间（毫秒）</param>
-        /// <returns>状态信息</returns>
+        /// <param name="waitForLoading">Whether to wait for ongoing loading operations</param>
+        /// <param name="maxWaitMs">Maximum wait time (milliseconds)</param>
+        /// <returns>Status information</returns>
         Task<string> GetStatusAsync(bool waitForLoading = true, int maxWaitMs = 30000);
     }
 
     /// <summary>
-    /// MCP应用级服务管理器实现
+    /// MCP application-level service manager implementation
     /// </summary>
     public class MCPServiceManager : IMCPServiceManager
     {
@@ -85,7 +85,7 @@ namespace RoslynMCP.MCP.Services
             _analysisService = analysisService;
             _options = options.Value;
 
-            // 启动时尝试加载默认解决方案
+            // Try to load default solution on startup
             _ = Task.Run(async () => await TryLoadDefaultSolutionAsync());
         }
 
@@ -98,14 +98,14 @@ namespace RoslynMCP.MCP.Services
         {
             if (!await _loadLock.WaitAsync(0))
             {
-                return "⚠️ 另一个解决方案加载操作正在进行中，请稍后再试。";
+                return "⚠️ Another solution loading operation is in progress, please try again later.";
             }
 
             try
             {
-                _logger.LogInformation("MCP服务管理器开始加载解决方案: {Path}", solutionPath);
+                _logger.LogInformation("MCP service manager starting to load solution: {Path}", solutionPath);
 
-                // 1. 使用解决方案状态管理器加载解决方案和符号缓存
+                // 1. Use solution state manager to load solution and symbol cache
                 var loadResult = await _solutionStateManager.LoadSolutionAsync(solutionPath, namespacePrefixes);
                 if (!_solutionStateManager.IsLoaded || _solutionStateManager.SymbolCache == null)
                 {
@@ -113,38 +113,38 @@ namespace RoslynMCP.MCP.Services
                     return loadResult;
                 }
 
-                // 2. 初始化查询服务
+                // 2. Initialize query service
                 var queryInitialized = await _queryService.InitializeAsync(_solutionStateManager.SymbolCache);
                 if (!queryInitialized)
                 {
                     _isServicesInitialized = false;
-                    return "❌ 查询服务初始化失败";
+                    return "❌ Query service initialization failed";
                 }
 
-                // 3. 初始化分析服务
+                // 3. Initialize analysis service
                 var analysisInitialized = await _analysisService.InitializeAsync();
                 if (!analysisInitialized)
                 {
                     _isServicesInitialized = false;
-                    return "❌ 分析服务初始化失败";
+                    return "❌ Analysis service initialization failed";
                 }
 
                 _isServicesInitialized = true;
-                _logger.LogInformation("MCP服务管理器已完成所有服务初始化");
+                _logger.LogInformation("MCP service manager has completed all service initialization");
 
-                // 增强状态信息
+                // Enhanced status information
                 var enhancedStatus = loadResult + "\n" +
-                                   "🔧 查询服务: 已初始化 ✅\n" +
-                                   "📊 分析服务: 已初始化 ✅\n" +
-                                   "💡 所有服务已就绪，可以使用分析工具";
+                                   "🔧 Query service: Initialized ✅\n" +
+                                   "📊 Analysis service: Initialized ✅\n" +
+                                   "💡 All services are ready, analysis tools can be used";
                 
                 return enhancedStatus;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "MCP服务管理器加载失败: {Path}", solutionPath);
+                _logger.LogError(ex, "MCP service manager loading failed: {Path}", solutionPath);
                 _isServicesInitialized = false;
-                return $"❌ MCP服务管理器加载失败: {ex.Message}";
+                return $"❌ MCP service manager loading failed: {ex.Message}";
             }
             finally
             {
@@ -159,28 +159,26 @@ namespace RoslynMCP.MCP.Services
         
         public async Task<string> GetStatusAsync(bool waitForLoading = true, int maxWaitMs = 30000)
         {
-            // 如果正在加载且用户希望等待，则等待加载完成
+            // If loading is in progress and user wants to wait, wait for loading to complete
             if (waitForLoading && _loadLock.CurrentCount == 0)
             {
-                _logger.LogDebug("检测到正在加载，等待加载完成...");
-                
-                try
+                    _logger.LogDebug("Detected loading in progress, waiting for completion...");                try
                 {
-                    // 使用CancellationToken控制最大等待时间
+                    // Use CancellationToken to control maximum wait time
                     using var cts = new CancellationTokenSource(maxWaitMs);
                     
-                    // 等待获取锁（即等待加载完成）
+                    // Wait to acquire lock (i.e., wait for loading to complete)
                     await _loadLock.WaitAsync(cts.Token);
                     
-                    // 立即释放锁，因为我们只是想等待加载完成
+                    // Immediately release the lock because we just want to wait for loading to complete
                     _loadLock.Release();
                     
-                    _logger.LogDebug("加载完成，返回最新状态");
+                    _logger.LogDebug("Loading completed, returning latest status");
                 }
                 catch (OperationCanceledException)
                 {
-                    _logger.LogWarning("等待加载完成超时（{MaxWaitMs}ms），返回当前状态", maxWaitMs);
-                    return GetStatusInternal() + "\n\n⚠️ 等待加载完成超时，状态可能不是最新的。";
+                    _logger.LogWarning("Waiting for loading completion timed out ({MaxWaitMs}ms), returning current status", maxWaitMs);
+                    return GetStatusInternal() + "\n\n⚠️ Waiting for loading completion timed out, status may not be the latest.";
                 }
             }
             
@@ -193,21 +191,21 @@ namespace RoslynMCP.MCP.Services
             
             if (_solutionStateManager.IsLoaded)
             {
-                baseStatus.AppendLine("\n\n**MCP服务状态**:");
-                baseStatus.AppendLine($"🔧 查询服务: {(_queryService.IsInitialized ? "已初始化 ✅" : "未初始化 ❌")}");
-                baseStatus.AppendLine($"📊 分析服务: {(_analysisService.IsInitialized ? "已初始化 ✅" : "未初始化 ❌")}");
+                baseStatus.AppendLine("\n\n**MCP Service Status**:");
+                baseStatus.AppendLine($"🔧 Query service: {(_queryService.IsInitialized ? "Initialized ✅" : "Not initialized ❌")}");
+                baseStatus.AppendLine($"📊 Analysis service: {(_analysisService.IsInitialized ? "Initialized ✅" : "Not initialized ❌")}");
                 
                 if (_isServicesInitialized)
                 {
-                    baseStatus.AppendLine("💡 所有服务已就绪，可以使用分析工具");
+                    baseStatus.AppendLine("💡 All services are ready, analysis tools can be used");
 
-                    // 添加已加载的项目列表
+                    // Add the list of loaded projects
                     try
                     {
                         var projects = _queryService.GetProjectsAsync().Result.ToList();
                         if (projects.Any())
                         {
-                            baseStatus.AppendLine("\n**已加载项目**:");
+                            baseStatus.AppendLine("\n**Loaded Projects**:");
                             const int maxProjectsToShow = 10;
                             foreach (var project in projects.Take(maxProjectsToShow))
                             {
@@ -215,23 +213,23 @@ namespace RoslynMCP.MCP.Services
                             }
                             if (projects.Count > maxProjectsToShow)
                             {
-                                baseStatus.AppendLine($"... 还有 {projects.Count - maxProjectsToShow} 个项目。使用 'ListProjects' 工具查看全部。");
+                                baseStatus.AppendLine($"... and {projects.Count - maxProjectsToShow} more projects. Use 'ListProjects' tool to view all.");
                             }
                         }
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, "获取项目列表以显示状态时出错");
-                        baseStatus.AppendLine("\n⚠️ 无法获取已加载的项目列表。");
+                        _logger.LogWarning(ex, "Error occurred when getting project list to display status");
+                        baseStatus.AppendLine("\n⚠️ Unable to get the list of loaded projects.");
                     }
                 }
                 else if (_loadLock.CurrentCount == 0)
                 {
-                    baseStatus.AppendLine("⏳ 服务正在初始化中...");
+                    baseStatus.AppendLine("⏳ Services are initializing...");
                 }
                 else
                 {
-                    baseStatus.AppendLine("⚠️ 服务初始化失败或未开始。");
+                    baseStatus.AppendLine("⚠️ Service initialization failed or not started.");
                 }
             }
 
@@ -244,7 +242,7 @@ namespace RoslynMCP.MCP.Services
             {
                 if (!string.IsNullOrWhiteSpace(_options.DefaultSolutionPath))
                 {
-                    // 解析默认命名空间前缀
+                    // Parse default namespace prefixes
                     List<string>? namespacePrefixes = null;
                     if (!string.IsNullOrWhiteSpace(_options.DefaultNamespacePrefixes))
                     {
@@ -254,7 +252,7 @@ namespace RoslynMCP.MCP.Services
                             .Where(prefix => !string.IsNullOrWhiteSpace(prefix))
                             .ToList();
                         
-                        _logger.LogInformation("使用默认命名空间前缀: {Prefixes}", string.Join(", ", namespacePrefixes));
+                        _logger.LogInformation("Using default namespace prefixes: {Prefixes}", string.Join(", ", namespacePrefixes));
                     }
 
                     var result = await LoadSolutionAsync(_options.DefaultSolutionPath, namespacePrefixes);

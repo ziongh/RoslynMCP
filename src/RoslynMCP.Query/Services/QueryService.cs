@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 namespace RoslynMCP.Query.Services
 {
     /// <summary>
-    /// 基础查询服务实现 - 仅提供Roslyn基础查询功能
+    /// Basic query service implementation - provides only Roslyn basic query functionality
     /// </summary>
     public class QueryService : IQueryService, IDisposable
     {
@@ -34,22 +34,22 @@ namespace RoslynMCP.Query.Services
             {
                 if (symbolCache == null)
                 {
-                    _logger.LogError("符号缓存服务不能为空");
+                    _logger.LogError("Symbol cache service cannot be null");
                     return Task.FromResult(false);
                 }
 
-                _logger.LogInformation("使用预构建的符号缓存初始化查询服务");
+                _logger.LogInformation("Initializing query service with pre-built symbol cache");
 
                 _symbolCache = symbolCache;
                 SolutionPath = symbolCache.Solution?.FilePath;
                 IsInitialized = true;
 
-                _logger.LogInformation("查询服务初始化完成");
+                _logger.LogInformation("Query service initialization completed");
                 return Task.FromResult(true);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "查询服务初始化失败");
+                _logger.LogError(ex, "Query service initialization failed");
                 return Task.FromResult(false);
             }
         }
@@ -104,7 +104,7 @@ namespace RoslynMCP.Query.Services
             var project = _symbolCache!.Solution!.Projects.FirstOrDefault(p => p.Name == projectName);
             if (project == null)
             {
-                _logger.LogWarning("未找到项目: {ProjectName}", projectName);
+                _logger.LogWarning("Project not found: {ProjectName}", projectName);
                 return Task.FromResult(Enumerable.Empty<INamedTypeSymbol>());
             }
 
@@ -122,7 +122,7 @@ namespace RoslynMCP.Query.Services
             var project = _symbolCache!.Solution!.Projects.FirstOrDefault(p => p.Name == projectName);
             if (project == null)
             {
-                _logger.LogWarning("未找到项目: {ProjectName}", projectName);
+                _logger.LogWarning("Project not found: {ProjectName}", projectName);
                 return Task.FromResult<ProjectInfo?>(null);
             }
 
@@ -134,7 +134,7 @@ namespace RoslynMCP.Query.Services
         {
             EnsureInitialized();
 
-            _logger.LogDebug("搜索符号: {Pattern}", request.Pattern);
+            _logger.LogDebug("Searching symbols: {Pattern}", request.Pattern);
 
             var results = new List<SymbolSearchResult>();
             var regexOptions = request.CaseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase;
@@ -142,13 +142,13 @@ namespace RoslynMCP.Query.Services
 
             IEnumerable<ISymbol> symbolsToSearch = _symbolCache!.AllSymbols.Values;
             
-            // 特殊处理 proto 符号的简写
+            // Special handling for proto symbol abbreviations
             if (request.SymbolKinds?.Any(k => k.Equals("proto", StringComparison.OrdinalIgnoreCase)) == true)
             {
                 symbolsToSearch = _symbolCache!.ProtoSymbols.Values;
             }
 
-            // 先过滤符合条件的符号，再限制数量 - 这样才能保证返回期望数量的结果
+            // Filter matching symbols first, then limit count - this ensures expected number of results
             var matchingSymbols = symbolsToSearch
                 .Where(symbol => MatchesSearchCriteria(symbol, request, regex));
 
@@ -158,7 +158,7 @@ namespace RoslynMCP.Query.Services
                 results.Add(ConvertToSearchResult(symbol));
             }
 
-            _logger.LogDebug("找到 {ResultCount} 个匹配的符号", results.Count);
+            _logger.LogDebug("Found {ResultCount} matching symbols", results.Count);
             return results;
         }
 
@@ -166,22 +166,22 @@ namespace RoslynMCP.Query.Services
         {
             EnsureInitialized();
 
-            _logger.LogDebug("查找引用: {SymbolName}", symbolName);
+            _logger.LogDebug("Finding references: {SymbolName}", symbolName);
 
             var results = new List<ReferenceLocation>();
 
-            // 查找符号
+            // Find symbol
             var targetSymbol = await FindSymbolAsync(symbolName, cancellationToken);
 
             if (targetSymbol == null)
             {
-                _logger.LogWarning("未找到符号: {SymbolName}", symbolName);
+                _logger.LogWarning("Symbol not found: {SymbolName}", symbolName);
                 return results;
             }
 
             try
             {
-                // 使用 SymbolFinder 查找所有引用
+                // Use SymbolFinder to find all references
                 var referencedSymbols = await SymbolFinder.FindReferencesAsync(
                     targetSymbol, 
                     _symbolCache!.Solution!, 
@@ -199,11 +199,11 @@ namespace RoslynMCP.Query.Services
                             var lineSpan = location.GetLineSpan();
                             var document = referenceLocation.Document;
                             
-                            // 获取行文本作为上下文
+                            // Get line text as context
                             var sourceText = await document.GetTextAsync(cancellationToken);
                             var lineText = sourceText.Lines[lineSpan.StartLinePosition.Line].ToString();
 
-                            // 判断是否为定义：比较位置和符号的定义位置
+                            // Determine if it's a definition: compare location with symbol's definition location
                             var isDefinition = referencedSymbol.Definition.Locations.Any(defLoc => 
                                 defLoc.SourceTree == location.SourceTree && 
                                 defLoc.SourceSpan == location.SourceSpan);
@@ -224,12 +224,12 @@ namespace RoslynMCP.Query.Services
                     }
                 }
 
-                _logger.LogDebug("找到 {ReferenceCount} 个引用", results.Count);
+                _logger.LogDebug("Found {ReferenceCount} references", results.Count);
                 return results.OrderBy(r => r.DocumentPath).ThenBy(r => r.LineNumber);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "查找引用时发生错误: {SymbolName}", symbolName);
+                _logger.LogError(ex, "Error occurred while finding references: {SymbolName}", symbolName);
                 return results;
             }
         }
@@ -300,26 +300,26 @@ namespace RoslynMCP.Query.Services
         {
             if (!IsInitialized)
             {
-                throw new InvalidOperationException("分析服务未初始化，请先调用 InitializeAsync");
+                throw new InvalidOperationException("Analysis service not initialized, please call InitializeAsync first");
             }
         }
         
         private bool MatchesSearchCriteria(ISymbol symbol, SymbolSearchRequest request, Regex regex)
         {
-            // 名称匹配 - 优先匹配符号名称，避免误匹配完整名称
+            // Name matching - prioritize matching symbol name to avoid false matches with full name
             if (!regex.IsMatch(symbol.Name))
             {
                 return false;
             }
 
-            // 命名空间过滤
+            // Namespace filtering
             if (!string.IsNullOrEmpty(request.Namespace) && 
                 (symbol.ContainingNamespace == null || !symbol.ContainingNamespace.ToDisplayString().Contains(request.Namespace)))
             {
                 return false;
             }
             
-            // 符号类型过滤
+            // Symbol type filtering
             if (request.SymbolKinds?.Any() == true)
             {
                 var kindStr = GetSymbolKindString(symbol);
@@ -403,7 +403,7 @@ namespace RoslynMCP.Query.Services
             }
             catch
             {
-                // 忽略错误
+                // Ignore errors
             }
             return "";
         }
@@ -415,7 +415,7 @@ namespace RoslynMCP.Query.Services
 
         private void DisposeInternal()
         {
-            // 符号缓存由 SolutionStateManager 管理，这里不释放
+            // Symbol cache is managed by SolutionStateManager, not released here
             _symbolCache = null;
             IsInitialized = false;
             SolutionPath = null;
@@ -503,16 +503,16 @@ namespace RoslynMCP.Query.Services
                 return null;
             }
 
-            // 对于partial类或多个声明，需要获取所有部分的源代码
+            // For partial classes or multiple declarations, need to get source code for all parts
             if (syntaxRefs.Length == 1)
             {
-                // 单个声明的情况
+                // Single declaration case
                 var syntaxNode = await syntaxRefs[0].GetSyntaxAsync(cancellationToken);
                 return syntaxNode.ToFullString();
             }
             else
             {
-                // 多个声明的情况（如partial类）
+                // Multiple declarations case (such as partial classes)
                 var sourceParts = new List<string>();
                 var processedFiles = new HashSet<string>();
 
@@ -521,10 +521,10 @@ namespace RoslynMCP.Query.Services
                     var syntaxNode = await syntaxRef.GetSyntaxAsync(cancellationToken);
                     var filePath = syntaxRef.SyntaxTree.FilePath;
                     
-                    // 为每个文件添加注释说明
+                    // Add comment for each file
                     if (!string.IsNullOrEmpty(filePath) && processedFiles.Add(filePath))
                     {
-                        sourceParts.Add($"// ===== 文件: {Path.GetFileName(filePath)} =====");
+                        sourceParts.Add($"// ===== File: {Path.GetFileName(filePath)} =====");
                     }
                     sourceParts.Add(syntaxNode.ToFullString().Trim());
                 }
@@ -545,21 +545,21 @@ namespace RoslynMCP.Query.Services
                 return null;
             }
 
-            // 只支持相对路径，不支持绝对路径
+            // Only relative paths are supported, absolute paths are not supported
             if (Path.IsPathRooted(filePath))
             {
                 _logger.LogError("Only relative paths are supported. Absolute path provided: {FilePath}", filePath);
                 return null;
             }
 
-            // 标准化相对路径（移除前导的./或..\等）
+            // Normalize relative path (remove leading ./ or ../ etc.)
             var normalizedPath = filePath.Replace('\\', '/').TrimStart('.', '/');
             
-            // 构建基于解决方案目录的完整路径
+            // Build full path based on solution directory
             var fullPath = Path.Combine(solutionDir, normalizedPath);
             fullPath = Path.GetFullPath(fullPath);
 
-            // 确保最终路径仍在解决方案目录内（防止../ 攻击）
+            // Ensure final path is still within solution directory (prevent ../ attacks)
             if (!fullPath.StartsWith(solutionDir, StringComparison.OrdinalIgnoreCase))
             {
                 _logger.LogError("Resolved file path is outside the solution directory: {FilePath} -> {FullPath}", filePath, fullPath);

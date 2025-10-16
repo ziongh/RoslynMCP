@@ -7,14 +7,14 @@ using RoslynMCP.MCP.Services;
 namespace RoslynMCP.MCP.Tools
 {
     /// <summary>
-    /// 解决方案管理MCP工具类
+    /// Solution management MCP tool class
     /// </summary>
     [McpServerToolType]
     public static class SolutionManagementTools
     {
 
         /// <summary>
-        /// 获取当前解决方案状态
+        /// Get current solution status
         /// </summary>
         [McpServerTool, Description("Get the current solution status and information. If solution is loading, it will wait for completion")]
         public static async Task<string> GetSolutionStatus(
@@ -32,17 +32,17 @@ namespace RoslynMCP.MCP.Tools
                 if (mcpServiceManager == null)
                 {
                     logger?.LogError("MCPServiceManager service not available");
-                    return "❌ MCP服务管理器服务不可用";
+                    return "❌ MCP service manager service unavailable";
                 }
 
-                // 使用新的GetStatusAsync方法，支持等待加载
+                // Use new GetStatusAsync method, supports waiting for loading
                 return await mcpServiceManager.GetStatusAsync(waitForLoading, maxWaitMs);
             }
             catch (Exception ex)
             {
                 var logger = serviceProvider?.GetService<ILogger>();
                 logger?.LogError(ex, "Error getting solution status");
-                return $"❌ 获取解决方案状态时发生错误: {ex.Message}";
+                return $"❌ Error occurred while getting solution status: {ex.Message}";
             }
         }
     }

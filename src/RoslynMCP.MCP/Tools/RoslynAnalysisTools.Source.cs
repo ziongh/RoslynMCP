@@ -11,7 +11,7 @@ namespace RoslynMCP.MCP.Tools
     public static partial class RoslynAnalysisTools
     {
         /// <summary>
-        /// 获取符号的完整源代码
+        /// Get the complete source code of a symbol
         /// </summary>
         [McpServerTool, Description("Get the full source code of any specific symbol, including classes, methods, properties, fields, etc.")]
         public static async Task<string> GetSourceCode(
@@ -54,7 +54,7 @@ namespace RoslynMCP.MCP.Tools
         }
 
         /// <summary>
-        /// 获取文件的完整内容
+        /// Get the full content of a file
         /// </summary>
         [McpServerTool, Description("Get the full content of a source file within the solution")]
         public static async Task<string> GetFileContent(
@@ -84,24 +84,24 @@ namespace RoslynMCP.MCP.Tools
                 if (fileContent == null)
                 {
                     var results = new StringBuilder();
-                    results.AppendLine($"## 📁 文件内容未找到");
+                    results.AppendLine($"## 📁 File content not found");
                     results.AppendLine();
-                    results.AppendLine($"**文件路径**: `{filePath}`");
+                    results.AppendLine($"**File path**: `{filePath}`");
                     results.AppendLine();
-                    results.AppendLine("**可能的原因**：");
-                    results.AppendLine("- 文件路径不正确或文件不存在");
-                    results.AppendLine("- 文件不在当前解决方案范围内");
-                    results.AppendLine("- 文件权限不足或被其他程序占用");
+                    results.AppendLine("**Possible reasons**:");
+                    results.AppendLine("- File path is incorrect or file does not exist");
+                    results.AppendLine("- File is not within the current solution scope");
+                    results.AppendLine("- Insufficient file permissions or file is occupied by another program");
                     results.AppendLine();
-                    results.AppendLine("**建议尝试**：");
-                    results.AppendLine("- 检查路径是否正确（必须是相对于解决方案根目录的路径）");
-                    results.AppendLine("- 使用 `ListProjects` 查看解决方案中的项目和文件");
-                    results.AppendLine("- 确认文件确实存在于解决方案中");
-                    results.AppendLine("- 确保使用相对路径而不是绝对路径");
+                    results.AppendLine("**Suggestions to try**:");
+                    results.AppendLine("- Check if the path is correct (must be relative to the solution root directory)");
+                    results.AppendLine("- Use `ListProjects` to view projects and files in the solution");
+                    results.AppendLine("- Confirm that the file actually exists in the solution");
+                    results.AppendLine("- Ensure using relative paths instead of absolute paths");
                     results.AppendLine();
-                    results.AppendLine("**路径格式示例**：");
-                    results.AppendLine("- 正确：`src/MyProject/MyFile.cs`");
-                    results.AppendLine("- 错误：`C:\\Solution\\src\\MyProject\\MyFile.cs` (不支持绝对路径)");
+                    results.AppendLine("**Path format examples**:");
+                    results.AppendLine("- Correct: `src/MyProject/MyFile.cs`");
+                    results.AppendLine("- Incorrect: `C:\\Solution\\src\\MyProject\\MyFile.cs` (absolute paths not supported)");
                     return results.ToString();
                 }
                 

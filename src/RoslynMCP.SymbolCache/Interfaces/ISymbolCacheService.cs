@@ -3,54 +3,54 @@ using Microsoft.CodeAnalysis;
 namespace RoslynMCP.Core.Interfaces
 {
     /// <summary>
-    /// Symbol 缓存服务接口
+    /// Symbol cache service interface
     /// </summary>
     public interface ISymbolCacheService
     {
         /// <summary>
-        /// 缓存是否已初始化
+        /// Whether the cache is initialized
         /// </summary>
         bool IsInitialized { get; }
 
         /// <summary>
-        /// 关联的解决方案
+        /// Associated solution
         /// </summary>
         Solution? Solution { get; }
 
         /// <summary>
-        /// 所有符号的字典
+        /// Dictionary of all symbols
         /// </summary>
         IReadOnlyDictionary<string, ISymbol> AllSymbols { get; }
 
         /// <summary>
-        /// Proto相关符号的字典
+        /// Dictionary of Proto-related symbols
         /// </summary>
         IReadOnlyDictionary<string, INamedTypeSymbol> ProtoSymbols { get; }
 
         /// <summary>
-        /// 异步初始化缓存
+        /// Asynchronously initialize cache
         /// </summary>
         Task InitializeAsync();
 
         /// <summary>
-        /// 更新指定文件的符号信息
+        /// Update symbol information for specified files
         /// </summary>
-        /// <param name="changedFiles">变更的文件路径</param>
+        /// <param name="changedFiles">Changed file paths</param>
         Task UpdateSymbolsAsync(string[] changedFiles);
 
         /// <summary>
-        /// 清除缓存
+        /// Clear cache
         /// </summary>
         void ClearCache();
 
         /// <summary>
-        /// 获取缓存统计信息
+        /// Get cache statistics
         /// </summary>
         CacheStatistics GetStatistics();
     }
 
     /// <summary>
-    /// 缓存统计信息
+    /// Cache statistics
     /// </summary>
     public class CacheStatistics
     {

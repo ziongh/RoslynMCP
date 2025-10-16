@@ -6,17 +6,17 @@ using System.Text;
 namespace RoslynMCP.MCP.Utils
 {
     /// <summary>
-    /// 列表格式化工具类，提供智能摘要和分组功能
+    /// List formatting utility class, providing intelligent summarization and grouping functionality
     /// </summary>
     public static class ListFormattingUtils
     {
         /// <summary>
-        /// 对包引用进行智能分组和摘要
+        /// Intelligently group and summarize package references
         /// </summary>
-        /// <param name="packageReferences">包引用列表</param>
-        /// <param name="maxDisplay">最大显示数量</param>
-        /// <param name="showSystemPackages">是否显示系统包</param>
-        /// <returns>格式化的包引用信息</returns>
+        /// <param name="packageReferences">Package reference list</param>
+        /// <param name="maxDisplay">Maximum display count</param>
+        /// <param name="showSystemPackages">Whether to show system packages</param>
+        /// <returns>Formatted package reference information</returns>
         public static (string formattedOutput, bool wasTruncated) FormatPackageReferences(
             IEnumerable<string> packageReferences, 
             int maxDisplay = 10, 
@@ -25,7 +25,7 @@ namespace RoslynMCP.MCP.Utils
             var packages = packageReferences.ToList();
             if (!packages.Any())
             {
-                return ("  - 无包引用", false);
+                return ("  - No package references", false);
             }
 
             var grouped = GroupPackageReferences(packages);
@@ -34,10 +34,10 @@ namespace RoslynMCP.MCP.Utils
             var displayCount = 0;
             var wasTruncated = false;
 
-            // 显示解决方案内项目引用
+            // Display solution-internal project references
             if (grouped.SolutionProjects.Any())
             {
-                results.AppendLine("  **解决方案内项目**:");
+                results.AppendLine("  **Solution Projects**:");
                 foreach (var package in grouped.SolutionProjects.Take(maxDisplay - displayCount))
                 {
                     results.AppendLine($"    - {package}");
@@ -46,15 +46,15 @@ namespace RoslynMCP.MCP.Utils
                 if (grouped.SolutionProjects.Count > maxDisplay - displayCount)
                 {
                     var remaining = grouped.SolutionProjects.Count - (maxDisplay - displayCount);
-                    results.AppendLine($"    - ... 还有 {remaining} 个项目引用");
+                    results.AppendLine($"    - ... and {remaining} more project references");
                     wasTruncated = true;
                 }
             }
 
-            // 显示第三方库
+            // Display third-party libraries
             if (grouped.ThirdPartyLibraries.Any() && displayCount < maxDisplay)
             {
-                results.AppendLine("  **第三方库**:");
+                results.AppendLine("  **Third-party Libraries**:");
                 var remainingSlots = maxDisplay - displayCount;
                 foreach (var package in grouped.ThirdPartyLibraries.Take(remainingSlots))
                 {
@@ -64,15 +64,15 @@ namespace RoslynMCP.MCP.Utils
                 if (grouped.ThirdPartyLibraries.Count > remainingSlots)
                 {
                     var remaining = grouped.ThirdPartyLibraries.Count - remainingSlots;
-                    results.AppendLine($"    - ... 还有 {remaining} 个第三方库");
+                    results.AppendLine($"    - ... and {remaining} more third-party libraries");
                     wasTruncated = true;
                 }
             }
 
-            // 显示系统包（如果请求且有剩余空间）
+            // Display system packages (if requested and space remains)
             if (showSystemPackages && grouped.SystemAssemblies.Any() && displayCount < maxDisplay)
             {
-                results.AppendLine("  **系统程序集**:");
+                results.AppendLine("  **System Assemblies**:");
                 var remainingSlots = maxDisplay - displayCount;
                 foreach (var package in grouped.SystemAssemblies.Take(remainingSlots))
                 {
@@ -82,21 +82,21 @@ namespace RoslynMCP.MCP.Utils
                 if (grouped.SystemAssemblies.Count > remainingSlots)
                 {
                     var remaining = grouped.SystemAssemblies.Count - remainingSlots;
-                    results.AppendLine($"    - ... 还有 {remaining} 个系统程序集");
+                    results.AppendLine($"    - ... and {remaining} more system assemblies");
                     wasTruncated = true;
                 }
             }
             else if (grouped.SystemAssemblies.Any())
             {
-                results.AppendLine($"  **系统程序集**: {grouped.SystemAssemblies.Count} 个 (使用 showSystemPackages=true 显示)");
+                results.AppendLine($"  **System Assemblies**: {grouped.SystemAssemblies.Count} total (use showSystemPackages=true to display)");
                 wasTruncated = true;
             }
 
-            // 添加摘要信息
+            // Add summary information
             if (wasTruncated || !showSystemPackages)
             {
                 results.AppendLine();
-                results.AppendLine($"  **包引用摘要**: 共 {totalCount} 个包 ({grouped.SolutionProjects.Count} 项目, {grouped.ThirdPartyLibraries.Count} 第三方, {grouped.SystemAssemblies.Count} 系统)");
+                results.AppendLine($"  **Package Reference Summary**: Total {totalCount} packages ({grouped.SolutionProjects.Count} projects, {grouped.ThirdPartyLibraries.Count} third-party, {grouped.SystemAssemblies.Count} system)");
             }
 
             return (results.ToString(), wasTruncated);
@@ -107,7 +107,7 @@ namespace RoslynMCP.MCP.Utils
             var results = new StringBuilder();
             if (grouped.SolutionProjects.Any())
             {
-                results.AppendLine("  **解决方案内项目**:");
+                results.AppendLine("  **Solution Projects**:");
                 foreach (var package in grouped.SolutionProjects)
                 {
                     results.AppendLine($"    - {package}");
@@ -115,7 +115,7 @@ namespace RoslynMCP.MCP.Utils
             }
             if (grouped.ThirdPartyLibraries.Any())
             {
-                results.AppendLine("  **第三方库**:");
+                results.AppendLine("  **Third-party Libraries**:");
                 foreach (var package in grouped.ThirdPartyLibraries)
                 {
                     results.AppendLine($"    - {package}");
@@ -123,7 +123,7 @@ namespace RoslynMCP.MCP.Utils
             }
             if (grouped.SystemAssemblies.Any())
             {
-                results.AppendLine("  **系统程序集**:");
+                results.AppendLine("  **System Assemblies**:");
                 foreach (var package in grouped.SystemAssemblies)
                 {
                     results.AppendLine($"    - {package}");
@@ -133,7 +133,7 @@ namespace RoslynMCP.MCP.Utils
         }
 
         /// <summary>
-        /// 将包引用分组为不同类别
+        /// Group package references into different categories
         /// </summary>
         public static PackageReferenceGroups GroupPackageReferences(IList<string> packageReferences)
         {
@@ -159,7 +159,7 @@ namespace RoslynMCP.MCP.Utils
         }
 
         /// <summary>
-        /// 检查是否为系统程序集
+        /// Check if it's a system assembly
         /// </summary>
         private static bool IsSystemAssembly(string packageName)
         {
@@ -176,19 +176,19 @@ namespace RoslynMCP.MCP.Utils
         }
 
         /// <summary>
-        /// 检查是否为解决方案内项目
+        /// Check if it's a solution project
         /// </summary>
         private static bool IsSolutionProject(string packageName)
         {
             if (string.IsNullOrEmpty(packageName)) return false;
 
-            // 这里可以根据实际情况调整判断逻辑
-            // 通常解决方案内项目不会有版本号，且可能包含特定的命名模式
+            // Logic can be adjusted based on actual situation
+            // Usually solution projects don't have version numbers and may contain specific naming patterns
             return !packageName.Contains(",") && !packageName.Contains("Version=");
         }
 
         /// <summary>
-        /// 生成带分组信息的截断提示
+        /// Generate truncation hint with grouping information
         /// </summary>
         public static string GenerateGroupedTruncationHint(
             int totalCount, 
@@ -199,31 +199,31 @@ namespace RoslynMCP.MCP.Utils
             if (totalCount <= displayCount) return string.Empty;
 
             var hint = new StringBuilder();
-            hint.AppendLine($"*(显示前 {displayCount} 个，共 {totalCount} 个包引用)*");
-            hint.AppendLine($"**完整分组统计**: {groups.SolutionProjects.Count} 项目, {groups.ThirdPartyLibraries.Count} 第三方, {groups.SystemAssemblies.Count} 系统");
-            hint.AppendLine($"*使用 {parameterName}=-1 显示全部，或 GetProjectDependencies 获取详细信息*");
+            hint.AppendLine($"*(Showing first {displayCount} of {totalCount} package references)*");
+            hint.AppendLine($"**Complete grouping statistics**: {groups.SolutionProjects.Count} projects, {groups.ThirdPartyLibraries.Count} third-party, {groups.SystemAssemblies.Count} system");
+            hint.AppendLine($"*Use {parameterName}=-1 to show all, or GetProjectDependencies for detailed information*");
             
             return hint.ToString();
         }
     }
 
     /// <summary>
-    /// 包引用分组结果
+    /// Package reference grouping results
     /// </summary>
     public class PackageReferenceGroups
     {
         /// <summary>
-        /// 解决方案内项目
+        /// Solution projects
         /// </summary>
         public List<string> SolutionProjects { get; set; } = new();
 
         /// <summary>
-        /// 第三方库
+        /// Third-party libraries
         /// </summary>
         public List<string> ThirdPartyLibraries { get; set; } = new();
 
         /// <summary>
-        /// 系统程序集
+        /// System assemblies
         /// </summary>
         public List<string> SystemAssemblies { get; set; } = new();
     }

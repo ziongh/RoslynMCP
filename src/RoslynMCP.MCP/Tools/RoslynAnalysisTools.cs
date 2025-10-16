@@ -10,45 +10,45 @@ namespace RoslynMCP.MCP.Tools
     public static partial class RoslynAnalysisTools
     {
         /// <summary>
-        /// 确保解决方案已加载并且服务已初始化
+        /// Ensure solution is loaded and services are initialized
         /// </summary>
         private static async Task<(bool success, string error)> EnsureSolutionLoadedAsync(
             IServiceProvider? serviceProvider, ILogger? logger = null)
         {
-            // 获取MCP服务管理器
+            // Get MCP service manager
             var mcpServiceManager = serviceProvider?.GetService<IMCPServiceManager>();
             if (mcpServiceManager == null)
             {
-                return (false, "MCP服务管理器不可用");
+                return (false, "MCP service manager unavailable");
             }
 
-            // 检查是否需要加载解决方案
+            // Check if solution needs to be loaded
             if (!mcpServiceManager.IsLoaded)
             {
                 var solutionPath = mcpServiceManager.CurrentSolutionPath;
                 if (string.IsNullOrEmpty(solutionPath))
                 {
-                    return (false, "没有配置解决方案路径");
+                    return (false, "No solution path configured");
                 }
-                logger?.LogDebug("解决方案未加载，正在初始化服务: {SolutionPath}", solutionPath);
+                logger?.LogDebug("Solution not loaded, initializing service: {SolutionPath}", solutionPath);
                 var loadResult = await mcpServiceManager.LoadSolutionAsync(solutionPath);
                 
-                // 检查加载结果
+                // Check load result
                 if (!mcpServiceManager.IsLoaded)
                 {
-                    return (false, $"解决方案加载失败: {loadResult}");
+                    return (false, $"Solution loading failed: {loadResult}");
                 }
             }
             else
             {
-                logger?.LogDebug("解决方案已加载且服务已就绪: {SolutionPath}", mcpServiceManager.CurrentSolutionPath);
+                logger?.LogDebug("Solution loaded and service ready: {SolutionPath}", mcpServiceManager.CurrentSolutionPath);
             }
 
             return (true, string.Empty);
         }
 
         /// <summary>
-        /// 检查是否为生成的文件
+        /// Check if it's a generated file
         /// </summary>
         private static bool IsGeneratedFile(string filePath)
         {
@@ -64,28 +64,28 @@ namespace RoslynMCP.MCP.Tools
         }
 
         /// <summary>
-        /// 检查是否为系统类型（构造函数、属性访问器等）
+        /// Check if it's a system type (constructors, property accessors, etc.)
         /// </summary>
         private static bool IsSystemType(string symbolName, string symbolKind)
         {
             if (string.IsNullOrEmpty(symbolName)) return false;
 
-            // 过滤构造函数
+            // Filter constructors
             if (symbolName.Equals(".ctor", StringComparison.OrdinalIgnoreCase) ||
                 symbolName.Equals(".cctor", StringComparison.OrdinalIgnoreCase))
                 return true;
 
-            // 过滤属性访问器
+            // Filter property accessors
             if (symbolName.StartsWith("get_", StringComparison.OrdinalIgnoreCase) ||
                 symbolName.StartsWith("set_", StringComparison.OrdinalIgnoreCase))
                 return true;
 
-            // 过滤事件访问器
+            // Filter event accessors
             if (symbolName.StartsWith("add_", StringComparison.OrdinalIgnoreCase) ||
                 symbolName.StartsWith("remove_", StringComparison.OrdinalIgnoreCase))
                 return true;
 
-            // 过滤序列化相关
+            // Filter serialization related
             if (symbolName.Contains("Serializer", StringComparison.OrdinalIgnoreCase) ||
                 symbolName.Contains("Serialization", StringComparison.OrdinalIgnoreCase))
                 return true;
@@ -94,16 +94,16 @@ namespace RoslynMCP.MCP.Tools
         }
 
         /// <summary>
-        /// 获取标准化的文件路径（相对于解决方案根目录）
+        /// Get normalized file path (relative to solution root directory)
         /// </summary>
         private static string GetNormalizedPath(string filePath)
         {
             if (string.IsNullOrEmpty(filePath)) return string.Empty;
 
-            // 如果是绝对路径，尝试转换为相对路径
+            // If it's an absolute path, try to convert to relative path
             if (Path.IsPathRooted(filePath))
             {
-                // 这里可以进一步优化，根据解决方案路径计算相对路径
+                // Can be further optimized here, calculate relative path based on solution path
                 return Path.GetFileName(filePath);
             }
 

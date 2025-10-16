@@ -3,44 +3,44 @@
 namespace RoslynMCP.Analysis.Services
 {
     /// <summary>
-    /// 高级分析服务接口 - 基于基础Query服务提供复杂分析功能
+    /// Advanced analysis service interface - provides complex analysis functions based on basic Query service
     /// </summary>
     public interface IAnalysisService
     {
         /// <summary>
-        /// 初始化分析服务（依赖于已初始化的 QueryService）
+        /// Initialize analysis service (depends on initialized QueryService)
         /// </summary>
         Task<bool> InitializeAsync(CancellationToken cancellationToken = default);
         
 
         /// <summary>
-        /// 检查服务是否已初始化
+        /// Check if service is initialized
         /// </summary>
         bool IsInitialized { get; }
 
         /// <summary>
-        /// 获取当前解决方案路径
+        /// Get current solution path
         /// </summary>
         string? SolutionPath { get; }
 
         /// <summary>
-        /// 释放资源
+        /// Release resources
         /// </summary>
         void Dispose();
 
         /// <summary>
-        /// 获取符号的继承链
+        /// Get symbol's inheritance chain
         /// </summary>
         Task<InheritanceHierarchy?> GetInheritanceHierarchyAsync(string symbolName, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// 获取方法体内的调用信息
+        /// Get invocation information within method body
         /// </summary>
         Task<IEnumerable<MethodInvocation>> GetMethodBodyInvocationsAsync(string methodName, string? projectName = null, CancellationToken cancellationToken = default);
     }
 
     /// <summary>
-    /// 方法调用信息
+    /// Method invocation information
     /// </summary>
     public class MethodInvocation
     {
@@ -52,7 +52,7 @@ namespace RoslynMCP.Analysis.Services
 
 
     /// <summary>
-    /// 表示继承层次结构的节点
+    /// Represents a node in inheritance hierarchy
     /// </summary>
     public class HierarchyNode
     {
@@ -61,7 +61,7 @@ namespace RoslynMCP.Analysis.Services
     }
 
     /// <summary>
-    /// 继承链数据模型
+    /// Inheritance chain data model
     /// </summary>
     public class InheritanceHierarchy
     {

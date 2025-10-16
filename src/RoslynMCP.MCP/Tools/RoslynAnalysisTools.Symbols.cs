@@ -16,7 +16,7 @@ namespace RoslynMCP.MCP.Tools
     public static partial class RoslynAnalysisTools
     {
         /// <summary>
-        /// 搜索符号（支持通配符）
+        /// Search symbols (supports wildcards)
         /// </summary>
         [McpServerTool, Description("Search for symbols in C# code using wildcard patterns (* and ?)")]
         public static async Task<string> SearchSymbols(
@@ -40,40 +40,40 @@ namespace RoslynMCP.MCP.Tools
                 var options = serviceProvider?.GetService<IOptions<AnalyzerOptions>>()?.Value;
                 var solutionmcpServiceManager = serviceProvider?.GetService<IMCPServiceManager>();
 
-                // 检查解决方案是否已加载
+                // Check if solution is loaded
                 if (solutionmcpServiceManager == null || !solutionmcpServiceManager.IsLoaded)
                 {
-                    return "❌ 没有加载解决方案。解决方案未加载。请使用 --solution 参数或设置 ROSLYN_MCP_SOLUTION_PATH 环境变量指定解决方案路径。";
+                    return "❌ No solution loaded. Solution not loaded. Please use --solution parameter or set ROSLYN_MCP_SOLUTION_PATH environment variable to specify solution path.";
                 }
 
                 var solutionPath = solutionmcpServiceManager.CurrentSolutionPath!;
 
-                // 设置默认值
+                // Set default values
                 maxResults = ParameterUtils.GetMaxDisplayResultsDefault(maxResults, serviceProvider);
 
-                // 验证输入
+                // Validate input
                 if (string.IsNullOrWhiteSpace(pattern))
                 {
-                    return "❌ 搜索模式不能为空。";
+                    return "❌ Search pattern cannot be empty.";
                 }
 
-                // 获取查询服务
+                // Get query service
                 var queryService = serviceProvider?.GetService<IQueryService>();
                 if (queryService == null)
                 {
                     return "Error: Query service not available.";
                 }
 
-                logger?.LogInformation("搜索符号: {Pattern} 在解决方案: {SolutionPath}", pattern, solutionPath);
+                logger?.LogInformation("Searching symbols: {Pattern} in solution: {SolutionPath}", pattern, solutionPath);
 
-                // 确保解决方案已加载且服务已初始化
+                // Ensure solution is loaded and service is initialized
                 var (success, error) = await EnsureSolutionLoadedAsync(serviceProvider, logger);
                 if (!success)
                 {
                     return $"Error: {error}";
                 }
 
-                // 构建搜索请求
+                // Build search request
                 var symbolTypesList = symbolTypes.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                 var searchRequest = new SymbolSearchRequest
                 {
@@ -83,10 +83,10 @@ namespace RoslynMCP.MCP.Tools
                     CaseSensitive = caseSensitive
                 };
 
-                // 执行搜索
+                // Execute search
                 var searchResults = await queryService.SearchSymbolsAsync(searchRequest);
 
-                // 应用过滤器
+                // Apply filters
                 var filteredResults = searchResults.AsEnumerable();
                 
                 if (excludeGeneratedFiles)
@@ -99,7 +99,7 @@ namespace RoslynMCP.MCP.Tools
                     filteredResults = filteredResults.Where(r => !IsSystemType(r.Name, r.SymbolKind));
                 }
 
-                // 格式化结果
+                // Format results
                 var results = new StringBuilder();
                 results.AppendLine("# Symbol Search Results");
                 results.AppendLine();
@@ -150,19 +150,19 @@ namespace RoslynMCP.MCP.Tools
                 results.AppendLine("💡 **Tip**: To get more information about a symbol, including its full file path, use the `get_symbol_details` tool with the symbol's `FullName`.");
                 results.AppendLine();
 
-                logger?.LogInformation("搜索完成，找到 {Count} 个符号", resultList.Count);
+                logger?.LogInformation("Search completed, found {Count} symbols", resultList.Count);
                 return results.ToString();
             }
             catch (Exception ex)
             {
                 var logger = serviceProvider?.GetService<ILogger>();
-                logger?.LogError(ex, "符号搜索失败: {Pattern}", pattern);
+                logger?.LogError(ex, "Symbol search failed: {Pattern}", pattern);
                 return $"Error: An unexpected error occurred during symbol search: {ex.Message}";
             }
         }
 
         /// <summary>
-        /// 获取符号的详细聚合信息（包含基本信息、源码、引用、继承关系等）
+        /// Get detailed aggregated information about a symbol (including basic information, source code, references, inheritance relationships, etc.)
         /// </summary>
         [McpServerTool, Description("Get comprehensive analysis of any symbol (e.g., class, method, property). Provides details like source code, references, and inheritance hierarchy (if applicable). This is the most detailed and recommended tool for symbol inspection.")]
         public static async Task<string> GetSymbolDetails(
@@ -181,40 +181,40 @@ namespace RoslynMCP.MCP.Tools
                 var logger = serviceProvider?.GetService<ILogger>();
                 var solutionmcpServiceManager = serviceProvider?.GetService<IMCPServiceManager>();
 
-                // 设置默认值
+                // Set default values
                 var maxReferences = ParameterUtils.GetMaxDisplayResultsDefault(0, serviceProvider);
 
-                // 检查解决方案是否已加载
+                // Check if solution is loaded
                 if (solutionmcpServiceManager == null || !solutionmcpServiceManager.IsLoaded)
                 {
-                    return "❌ 解决方案未加载。请使用 --solution 参数或设置 ROSLYN_MCP_SOLUTION_PATH 环境变量指定解决方案路径。";
+                    return "❌ Solution not loaded. Please use --solution parameter or set ROSLYN_MCP_SOLUTION_PATH environment variable to specify solution path.";
                 }
 
                 var solutionPath = solutionmcpServiceManager.CurrentSolutionPath!;
 
                 if (string.IsNullOrWhiteSpace(symbolName))
                 {
-                    return "❌ 符号名称不能为空。";
+                    return "❌ Symbol name cannot be empty.";
                 }
 
-                // 获取服务
+                // Get services
                 var queryService = serviceProvider?.GetService<IQueryService>();
                 var analysisService = serviceProvider?.GetService<IAnalysisService>();
                 if (queryService == null)
                 {
-                    return "❌ 查询服务不可用。";
+                    return "❌ Query service is not available.";
                 }
 
-                logger?.LogInformation("获取符号详细信息: {SymbolName}", symbolName);
+                logger?.LogInformation("Getting symbol details: {SymbolName}", symbolName);
 
-                // 确保解决方案已加载且服务已初始化
+                // Ensure solution is loaded and services are initialized
                 var (success, error) = await EnsureSolutionLoadedAsync(serviceProvider, logger);
                 if (!success)
                 {
                     return $"Error: {error}";
                 }
 
-                // 构建聚合结果
+                // Build aggregated results
                 var results = new StringBuilder();
                 results.AppendLine($"# Complete Symbol Analysis: `{symbolName}`");
                 results.AppendLine();
@@ -222,43 +222,43 @@ namespace RoslynMCP.MCP.Tools
                 results.AppendLine($"**Analysis Date**: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
                 results.AppendLine();
 
-                // 1. 基本符号信息
-                results.AppendLine("## 📋 基本信息");
+                // 1. Basic symbol information
+                results.AppendLine("## 📋 Basic Information");
                 try
                 {
                     var symbolDetails = await queryService.GetSymbolDetailsAsync(symbolName);
                     if (symbolDetails != null)
                     {
-                        results.AppendLine($"- **名称**: `{symbolDetails.Name}`");
-                        results.AppendLine($"- **完整名称**: `{symbolDetails.FullName}`");
-                        results.AppendLine($"- **类型**: {symbolDetails.SymbolKind}");
-                        results.AppendLine($"- **命名空间**: {symbolDetails.Namespace}");
-                        results.AppendLine($"- **程序集**: {symbolDetails.AssemblyName}");
-                        results.AppendLine($"- **可访问性**: {symbolDetails.Accessibility}");
-                        results.AppendLine($"- **源位置**: `{symbolDetails.SourceLocation}`");
+                        results.AppendLine($"- **Name**: `{symbolDetails.Name}`");
+                        results.AppendLine($"- **Full Name**: `{symbolDetails.FullName}`");
+                        results.AppendLine($"- **Type**: {symbolDetails.SymbolKind}");
+                        results.AppendLine($"- **Namespace**: {symbolDetails.Namespace}");
+                        results.AppendLine($"- **Assembly**: {symbolDetails.AssemblyName}");
+                        results.AppendLine($"- **Accessibility**: {symbolDetails.Accessibility}");
+                        results.AppendLine($"- **Source Location**: `{symbolDetails.SourceLocation}`");
 
                         if (!string.IsNullOrEmpty(symbolDetails.Documentation))
                         {
                             results.AppendLine();
-                            results.AppendLine("**文档说明**:");
+                            results.AppendLine("**Documentation**:");
                             results.AppendLine(symbolDetails.Documentation);
                         }
                     }
                     else
                     {
-                        results.AppendLine($"⚠️ 无法找到符号 `{symbolName}` 的基本信息");
+                        results.AppendLine($"⚠️ Unable to find basic information for symbol `{symbolName}`");
                     }
                 }
                 catch (Exception ex)
                 {
-                    results.AppendLine($"❌ 获取基本信息失败: {ex.Message}");
+                    results.AppendLine($"❌ Failed to get basic information: {ex.Message}");
                 }
                 results.AppendLine();
 
-                // 2. 源代码（如果请求）
+                // 2. Source code (if requested)
                 if (includeSourceCode)
                 {
-                    results.AppendLine("## 📄 源代码");
+                    results.AppendLine("## 📄 Source Code");
                     try
                     {
                         var sourceCode = await queryService.GetSourceCodeAsync(symbolName);
@@ -270,26 +270,26 @@ namespace RoslynMCP.MCP.Tools
                         }
                         else
                         {
-                            results.AppendLine("⚠️ 源代码不可用（可能是外部引用或编译时生成）");
+                            results.AppendLine("⚠️ Source code not available (may be external reference or generated at compile time)");
                         }
                     }
                     catch (Exception ex)
                     {
-                        results.AppendLine($"❌ 获取源代码失败: {ex.Message}");
+                        results.AppendLine($"❌ Failed to get source code: {ex.Message}");
                     }
                     results.AppendLine();
                 }
 
-                // 3. 继承层次（如果请求且分析服务可用）
+                // 3. Inheritance hierarchy (if requested and analysis service is available)
                 if (includeInheritanceHierarchy && analysisService != null)
                 {
-                    results.AppendLine("## 🏗️ 继承层次");
+                    results.AppendLine("## 🏗️ Inheritance Hierarchy");
                     try
                     {
                         var hierarchy = await analysisService.GetInheritanceHierarchyAsync(symbolName);
                         if (hierarchy != null)
                         {
-                            results.AppendLine("**基类链**:");
+                            results.AppendLine("**Base class chain**:");
                             if (hierarchy.BaseNode != null)
                             {
                                 var current = hierarchy.BaseNode;
@@ -299,7 +299,7 @@ namespace RoslynMCP.MCP.Tools
                                     var line = $"{indent}- {current.SymbolName}";
                                     if (current.SymbolName == symbolName)
                                     {
-                                        line += " *(当前类)*";
+                                        line += " *(current class)*";
                                     }
                                     results.AppendLine(line);
                                     current = current.Children.FirstOrDefault();
@@ -308,11 +308,11 @@ namespace RoslynMCP.MCP.Tools
                             }
                             else
                             {
-                                results.AppendLine("- 无基类");
+                                results.AppendLine("- No base class");
                             }
 
                             results.AppendLine();
-                            results.AppendLine("**派生类**:");
+                            results.AppendLine("**Derived classes**:");
                             if (hierarchy.DerivedNodes.Any())
                             {
                                 foreach (var derived in hierarchy.DerivedNodes)
@@ -322,25 +322,25 @@ namespace RoslynMCP.MCP.Tools
                             }
                             else
                             {
-                                results.AppendLine("- 无派生类");
+                                results.AppendLine("- No derived classes");
                             }
                         }
                         else
                         {
-                            results.AppendLine("⚠️ 继承层次信息不可用");
+                            results.AppendLine("⚠️ Inheritance hierarchy information not available");
                         }
                     }
                     catch (Exception ex)
                     {
-                        results.AppendLine($"❌ 获取继承层次失败: {ex.Message}");
+                        results.AppendLine($"❌ Failed to get inheritance hierarchy: {ex.Message}");
                     }
                     results.AppendLine();
                 }
 
-                // 4. 引用（如果请求）
+                // 4. References (if requested)
                 if (includeReferences)
                 {
-                    results.AppendLine("## 🔗 引用分析");
+                    results.AppendLine("## 🔗 Reference Analysis");
                     try
                     {
                         var references = await queryService.FindReferencesAsync(symbolName);
@@ -350,7 +350,7 @@ namespace RoslynMCP.MCP.Tools
                         if (allFilteredReferences.Any())
                         {
                             var totalCount = allFilteredReferences.Count;
-                            results.AppendLine($"找到 **{totalCount}** 个引用");
+                            results.AppendLine($"Found **{totalCount}** references");
                             var refHint = ParameterUtils.GenerateTruncationHint(totalCount, maxReferences, "maxReferences", "use FindReferences tool");
                             if (!string.IsNullOrEmpty(refHint))
                             {
@@ -373,12 +373,12 @@ namespace RoslynMCP.MCP.Tools
                         }
                         else
                         {
-                            results.AppendLine("⚠️ 未找到引用");
+                            results.AppendLine("⚠️ No references found");
                         }
                     }
                     catch (Exception ex)
                     {
-                        results.AppendLine($"❌ 获取引用失败: {ex.Message}");
+                        results.AppendLine($"❌ Failed to get references: {ex.Message}");
                     }
                     results.AppendLine();
                 }
@@ -390,13 +390,13 @@ namespace RoslynMCP.MCP.Tools
                 results.AppendLine("- `GetFileContent` - Complete file content with context");
                 results.AppendLine("- `FindReferences` - Complete reference analysis");
 
-                logger?.LogInformation("符号详细信息获取完成: {SymbolName}", symbolName);
+                logger?.LogInformation("Symbol details retrieval completed: {SymbolName}", symbolName);
                 return results.ToString();
             }
             catch (Exception ex)
             {
                 var logger = serviceProvider?.GetService<ILogger>();
-                logger?.LogError(ex, "获取符号详细信息失败: {SymbolName}", symbolName);
+                logger?.LogError(ex, "Failed to get symbol details: {SymbolName}", symbolName);
                 return $"Error: An unexpected error occurred while getting symbol details: {ex.Message}";
             }
         }

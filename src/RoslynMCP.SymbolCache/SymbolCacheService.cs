@@ -8,7 +8,7 @@ using Timer = RoslynMCP.Core.Utils.Timer;
 namespace RoslynMCP.SymbolCache
 {
     /// <summary>
-    /// Symbol 缓存服务实现 - 精简版，专注增量更新
+    /// Symbol cache service implementation - streamlined version, focused on incremental updates
     /// </summary>
     public class SymbolCacheService : ISymbolCacheService
     {
@@ -33,23 +33,23 @@ namespace RoslynMCP.SymbolCache
         public IReadOnlyDictionary<string, INamedTypeSymbol> ProtoSymbols => _protoSymbols;
 
         /// <summary>
-        /// 全量初始化符号缓存 - 精简版
+        /// Full initialization of symbol cache - streamlined version
         /// </summary>
         public async Task InitializeAsync()
         {
             if (_isInitialized) return;
 
-            using var timer = Timer.Start("符号缓存初始化");
+            using var timer = Timer.Start("Symbol cache initialization");
             
             await LoadSymbolsFromSolution();
             _isInitialized = true;
             _lastInitialized = DateTime.Now;
 
-            _logger?.LogInformation($"符号缓存初始化完成：{_allSymbols.Count} 个符号，其中 {_protoSymbols.Count} 个 Proto 符号");
+            _logger?.LogInformation($"Symbol cache initialization completed: {_allSymbols.Count} symbols, including {_protoSymbols.Count} Proto symbols");
         }
 
         /// <summary>
-        /// 从解决方案加载符号数据
+        /// Load symbol data from solution
         /// </summary>
         private async Task LoadSymbolsFromSolution()
         {
@@ -57,7 +57,7 @@ namespace RoslynMCP.SymbolCache
             _protoSymbols.Clear();
 
             var projects = _solution.Projects.ToList();
-            _logger?.LogInformation($"并行分析 {projects.Count} 个项目...");
+            _logger?.LogInformation($"Analyzing {projects.Count} projects in parallel...");
             
             var projectTasks = projects.Select(async project =>
             {
@@ -68,45 +68,45 @@ namespace RoslynMCP.SymbolCache
                 }
                 catch (Exception ex)
                 {
-                    _logger?.LogWarning(ex, $"项目 {project.Name} 加载失败");
+                    _logger?.LogWarning(ex, $"Failed to load project {project.Name}");
                     return (project, (Compilation?)null);
                 }
             }).ToArray();
 
             var projectResults = await Task.WhenAll(projectTasks);
 
-            // 全量分析所有符号
+            // Analyze all symbols comprehensively
             foreach (var (project, compilation) in projectResults)
             {
                 if (compilation == null) continue;
 
                 var projectSymbols = GetAllSymbols(compilation.GlobalNamespace)
-                    .Where(MatchesNamespaceFilter); // 先过滤命名空间，提高性能
+                    .Where(MatchesNamespaceFilter); // Filter namespaces first to improve performance
 
                 foreach (var symbol in projectSymbols)
                 {
                     var id = symbol.ToDisplayString();
-                    // 使用TryAdd进行线程安全的添加操作
+                    // Use TryAdd for thread-safe addition operations
                     _allSymbols.TryAdd(id, symbol);
                 }
             }
         }
 
         /// <summary>
-        /// 增量更新指定文件的符号
+        /// Incrementally update symbols for specified files
         /// </summary>
         public async Task UpdateSymbolsAsync(string[] changedFiles)
         {
             if (!_isInitialized)
             {
-                throw new InvalidOperationException("必须先调用 InitializeAsync() 进行初始化");
+                throw new InvalidOperationException("Must call InitializeAsync() first for initialization");
             }
 
-            using var timer = Timer.Start("符号增量更新");
+            using var timer = Timer.Start("Symbol incremental update");
             
             var changedFileSet = new HashSet<string>(changedFiles);
 
-            // 移除变化文件中的旧符号
+            // Remove old symbols from changed files
             var symbolsToRemove = _allSymbols.Where(kv => 
             {
                 var location = kv.Value.Locations.FirstOrDefault()?.SourceTree?.FilePath;
@@ -119,7 +119,7 @@ namespace RoslynMCP.SymbolCache
                 _protoSymbols.TryRemove(id, out _);
             }
 
-            // 重新分析变化的文件
+            // Re-analyze changed files
             var projects = _solution.Projects;
             foreach (var project in projects)
             {
@@ -132,7 +132,7 @@ namespace RoslynMCP.SymbolCache
                         var location = symbol.Locations.FirstOrDefault()?.SourceTree?.FilePath;
                         return location != null && changedFileSet.Contains(location);
                     })
-                    .Where(MatchesNamespaceFilter) // 同样先过滤命名空间，提高性能
+                    .Where(MatchesNamespaceFilter) // Also filter namespaces first to improve performance
                     .ToList();
 
                 foreach (var symbol in projectSymbols)
@@ -142,7 +142,7 @@ namespace RoslynMCP.SymbolCache
                 }
             }
 
-            Console.WriteLine($"增量更新了 {changedFileSet.Count} 个文件中的符号");
+            Console.WriteLine($"Incrementally updated symbols in {changedFileSet.Count} files");
         }
 
         public void ClearCache()
@@ -152,7 +152,7 @@ namespace RoslynMCP.SymbolCache
             _isInitialized = false;
             _lastInitialized = DateTime.MinValue;
             
-            _logger?.LogInformation("符号缓存已清空");
+            _logger?.LogInformation("Symbol cache has been cleared");
         }
 
         public CacheStatistics GetStatistics()
@@ -162,7 +162,7 @@ namespace RoslynMCP.SymbolCache
                 TotalSymbols = _allSymbols.Count,
                 ProtoSymbols = _protoSymbols.Count,
                 LastUpdated = _lastInitialized,
-                InitializationTime = TimeSpan.Zero, // TODO: 记录初始化时间
+                InitializationTime = TimeSpan.Zero, // TODO: Record initialization time
                 MemoryUsageBytes = EstimateMemoryUsage()
             };
         }
@@ -173,11 +173,11 @@ namespace RoslynMCP.SymbolCache
         }
 
         /// <summary>
-        /// 检查符号是否匹配命名空间过滤器
+        /// Check if symbol matches namespace filter
         /// </summary>
         private bool MatchesNamespaceFilter(ISymbol symbol)
         {
-            if (!_namespacePrefixes.Any()) return true; // 没有过滤器，接受所有符号
+            if (!_namespacePrefixes.Any()) return true; // No filter, accept all symbols
             
             var ns = symbol.ContainingNamespace?.ToDisplayString() ?? "";
             return _namespacePrefixes.Any(prefix => ns.StartsWith(prefix));

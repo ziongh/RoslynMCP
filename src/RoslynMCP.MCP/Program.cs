@@ -20,13 +20,13 @@ using Microsoft.CodeAnalysis.MSBuild;
 namespace RoslynMCP.MCP
 {
     /// <summary>
-    /// RoslynMCP 主程序
+    /// RoslynMCP main program
     /// </summary>
     class Program
     {
         static async Task Main(string[] args)
         {
-            // 检查是否是HTTP模式
+            // Check if it's HTTP mode
             bool httpMode = args.Contains("--http") || args.Contains("-h");
             
             if (httpMode)
@@ -40,27 +40,27 @@ namespace RoslynMCP.MCP
         }
 
         /// <summary>
-        /// 运行HTTP模式服务器
+        /// Run HTTP mode server
         /// </summary>
         static void RunHttpServer(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // 检查是否暴露到局域网
+            // Check if expose to LAN
             bool exposeToLan = args.Contains("--expose-lan");
 
-            // 配置文件和环境变量
+            // Configuration files and environment variables
             builder.Configuration
                 .AddJsonFile("appsettings.json", optional: true)
                 .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true);
 
-            // 配置日志
+            // Configure logging
             builder.Logging.ClearProviders();
             builder.Logging.AddConsole();
 
             ConfigureAnalyzerServices(builder.Services, builder.Configuration, args);
 
-            // 注册MCP服务器 - HTTP传输
+            // Register MCP server - HTTP transport
             builder.Services
                 .AddMcpServer()
                 .WithHttpTransport()
@@ -68,25 +68,25 @@ namespace RoslynMCP.MCP
 
             var app = builder.Build();
 
-            // 显式获取服务实例，触发其构造函数和初始化逻辑
+            // Explicitly get service instance to trigger constructor and initialization logic
             _ = app.Services.GetRequiredService<IMCPServiceManager>();
 
-            // 映射MCP端点
+            // Map MCP endpoints
             app.MapMcp();
 
             var port = GetPortFromArgs(args) ?? 3001;
             var logger = app.Services.GetRequiredService<ILogger<Program>>();
             
-            // 记录网络信息
+            // Log network information
             LogNetworkInfo(logger, port, exposeToLan);
 
-            // 启动服务器
+            // Start server
             var hostAddress = exposeToLan ? "*" : "localhost";
             app.Run($"http://{hostAddress}:{port}");
         }
 
         /// <summary>
-        /// 记录网络信息，显示可用的访问地址
+        /// Log network information, display available access addresses
         /// </summary>
         static void LogNetworkInfo(ILogger logger, int port, bool exposeToLan)
         {
@@ -121,18 +121,18 @@ namespace RoslynMCP.MCP
         }
 
         /// <summary>
-        /// 运行Stdio模式服务器
+        /// Run Stdio mode server
         /// </summary>
         static async Task RunStdioServer(string[] args)
         {
             var builder = Host.CreateApplicationBuilder(args);
             
-            // 配置文件和环境变量
+            // Configure files and environment variables
             builder.Configuration
                 .AddJsonFile("appsettings.json", optional: true)
                 .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true);
                 
-            // 配置日志输出到stderr（MCP协议要求）
+            // Configure log output to stderr (required by MCP protocol)
             builder.Logging.ClearProviders();
             builder.Logging.AddConsole(options =>
             {
@@ -141,7 +141,7 @@ namespace RoslynMCP.MCP
 
             ConfigureAnalyzerServices(builder.Services, builder.Configuration, args);
 
-            // 注册MCP服务器 - Stdio传输
+            // Register MCP server - Stdio transport
             builder.Services
                 .AddMcpServer()
                 .WithStdioServerTransport()
@@ -149,14 +149,14 @@ namespace RoslynMCP.MCP
 
             var host = builder.Build();
 
-            // 显式获取服务实例，触发其构造函数和初始化逻辑
+            // Explicitly get service instance to trigger constructor and initialization logic
             _ = host.Services.GetRequiredService<IMCPServiceManager>();
 
             await host.RunAsync();
         }
 
         /// <summary>
-        /// 从命令行参数中解析端口号
+        /// Parse port number from command line arguments
         /// </summary>
         static int? GetPortFromArgs(string[] args)
         {
@@ -174,7 +174,7 @@ namespace RoslynMCP.MCP
         }
 
         /// <summary>
-        /// 从命令行参数中解析解决方案路径
+        /// Parse solution path from command line arguments
         /// </summary>
         static string? GetSolutionPathFromArgs(string[] args)
         {
@@ -189,7 +189,7 @@ namespace RoslynMCP.MCP
         }
 
         /// <summary>
-        /// 从命令行参数中解析命名空间前缀
+        /// Parse namespace prefixes from command line arguments
         /// </summary>
         static string? GetNamespacesFromArgs(string[] args)
         {
@@ -205,10 +205,10 @@ namespace RoslynMCP.MCP
 
         private static void ConfigureAnalyzerServices(IServiceCollection services, IConfiguration configuration, string[] args)
         {
-            // 注册配置选项
+            // Register configuration options
             services.Configure<AnalyzerOptions>(configuration.GetSection("AnalyzerOptions"));
             
-            // 从环境变量和命令行参数覆盖配置
+            // Override configuration from environment variables and command line arguments
             var solutionPath = GetSolutionPathFromArgs(args) ?? Environment.GetEnvironmentVariable("ROSLYN_MCP_SOLUTION_PATH");
             var namespaces = GetNamespacesFromArgs(args) ?? Environment.GetEnvironmentVariable("ROSLYN_MCP_NAMESPACE_PREFIXES");
 
@@ -224,14 +224,14 @@ namespace RoslynMCP.MCP
                 }
             });
 
-            // 核心服务
+            // Core services
             services.AddSingleton<DiagnosticLogger>();
             services.AddSingleton<SecurityValidator>();
             
-            // 注册MSBuildWorkspace为单例服务，提高性能
+            // Register MSBuildWorkspace as singleton service to improve performance
             services.AddSingleton<MSBuildWorkspace>(provider => MSBuildWorkspace.Create());
             
-            // 解决方案状态管理器（核心）
+            // Solution state manager (core)
             services.AddSingleton<RoslynMCP.SymbolCache.ISolutionStateManager>(provider =>
             {
                 var logger = provider.GetRequiredService<ILogger<RoslynMCP.SymbolCache.SolutionStateManager>>();
@@ -240,42 +240,42 @@ namespace RoslynMCP.MCP
                 return new RoslynMCP.SymbolCache.SolutionStateManager(logger, securityValidator, workspace);
             });
             
-            // MCP应用级服务管理器
+            // MCP application-level service manager
             services.AddSingleton<IMCPServiceManager, MCPServiceManager>();
 
-            // 查询和分析服务 - 使用单例模式以避免重复初始化
+            // Query and analysis services - use singleton pattern to avoid repeated initialization
             services.AddSingleton<IQueryService, QueryService>();
             services.AddSingleton<Analysis.Services.IAnalysisService, Analysis.Services.AnalysisService>();
         }
     }
 
     /// <summary>
-    /// 分析器配置选项
+    /// Analyzer configuration options
     /// </summary>
     public class AnalyzerOptions
     {
         /// <summary>
-        /// 默认解决方案路径
+        /// Default solution path
         /// </summary>
         public string DefaultSolutionPath { get; set; } = string.Empty;
 
         /// <summary>
-        /// 默认命名空间前缀列表（逗号分隔）
+        /// Default namespace prefix list (comma-separated)
         /// </summary>
         public string DefaultNamespacePrefixes { get; set; } = string.Empty;
 
         /// <summary>
-        /// 最大查询结果数量
+        /// Maximum query result count
         /// </summary>
         public int MaxQueryResults { get; set; } = 20;
 
         /// <summary>
-        /// 最大图节点数量
+        /// Maximum graph node count
         /// </summary>
         public int MaxGraphNodes { get; set; } = 1000;
 
         /// <summary>
-        /// 缓存过期时间（分钟）
+        /// Cache expiration time (minutes)
         /// </summary>
         public int CacheExpirationMinutes { get; set; } = 30;
     }

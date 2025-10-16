@@ -7,42 +7,42 @@ using RoslynMCP.SymbolCache.Security;
 namespace RoslynMCP.SymbolCache
 {
     /// <summary>
-    /// 解决方案状态管理器 - 管理解决方案加载和符号缓存
+    /// Solution state manager - manages solution loading and symbol caching
     /// </summary>
     public interface ISolutionStateManager
     {
         /// <summary>
-        /// 当前解决方案路径
+        /// Current solution path
         /// </summary>
         string? CurrentSolutionPath { get; }
 
         /// <summary>
-        /// 解决方案是否已加载
+        /// Whether the solution is loaded
         /// </summary>
         bool IsLoaded { get; }
 
         /// <summary>
-        /// 获取符号缓存服务
+        /// Get symbol cache service
         /// </summary>
         ISymbolCacheService? SymbolCache { get; }
 
         /// <summary>
-        /// 加载解决方案并创建符号缓存
+        /// Load solution and create symbol cache
         /// </summary>
-        /// <param name="solutionPath">解决方案路径</param>
-        /// <param name="namespacePrefixes">要包含的命名空间前缀列表</param>
-        /// <returns>加载结果消息</returns>
+        /// <param name="solutionPath">Solution path</param>
+        /// <param name="namespacePrefixes">List of namespace prefixes to include</param>
+        /// <returns>Loading result message</returns>
         Task<string> LoadSolutionAsync(string solutionPath, List<string>? namespacePrefixes = null);
 
         /// <summary>
-        /// 获取当前解决方案状态
+        /// Get current solution status
         /// </summary>
-        /// <returns>状态信息</returns>
+        /// <returns>Status information</returns>
         string GetStatus();
     }
 
     /// <summary>
-    /// 解决方案状态管理器实现
+    /// Solution state manager implementation
     /// </summary>
     public class SolutionStateManager : ISolutionStateManager
     {
@@ -74,36 +74,36 @@ namespace RoslynMCP.SymbolCache
             {
                 if (string.IsNullOrWhiteSpace(solutionPath))
                 {
-                    return "❌ 解决方案路径不能为空";
+                    return "❌ Solution path cannot be empty";
                 }
 
-                // 验证路径安全性（如果提供了安全验证器）
+                // Validate path security (if security validator is provided)
                 if (_securityValidator != null && !_securityValidator.ValidateSolutionPath(solutionPath))
                 {
                     _logger.LogWarning("Invalid solution path attempted: {Path}", solutionPath);
-                    return "❌ 无效的解决方案路径，路径必须在允许的目录范围内";
+                    return "❌ Invalid solution path, path must be within allowed directories";
                 }
 
-                // 检查文件是否存在
+                // Check if file exists
                 if (!File.Exists(solutionPath))
                 {
-                    return $"❌ 解决方案文件不存在: {solutionPath}";
+                    return $"❌ Solution file does not exist: {solutionPath}";
                 }
 
-                // 验证是否为解决方案文件
+                // Validate if it's a solution file
                 if (!Path.GetExtension(solutionPath).Equals(".sln", StringComparison.OrdinalIgnoreCase))
                 {
-                    return "❌ 文件必须是 .sln 解决方案文件";
+                    return "❌ File must be a .sln solution file";
                 }
 
                 var fullPath = Path.GetFullPath(solutionPath);
 
-                // 如果是相同路径和相同的前缀，直接返回成功
+                // If it's the same path and same prefixes, return success directly
                 if (_currentSolutionPath == fullPath && _isLoaded && 
                     AreNamespacePrefixesEqual(_currentNamespacePrefixes, namespacePrefixes))
                 {
                     _logger.LogDebug("Solution already loaded with the same namespace prefixes: {Path}", fullPath);
-                    return $"✅ 解决方案已加载: {Path.GetFileName(fullPath)}";
+                    return $"✅ Solution already loaded: {Path.GetFileName(fullPath)}";
                 }
 
                 _currentSolutionPath = fullPath;
@@ -114,12 +114,12 @@ namespace RoslynMCP.SymbolCache
                     _currentSolutionPath, 
                     _currentNamespacePrefixes?.Any() == true ? string.Join(", ", _currentNamespacePrefixes) : "None");
 
-                // 1. 使用单例 MSBuildWorkspace 实例提高性能和资源管理
-                // 清理旧解决方案状态再打开新方案
+                // 1. Use singleton MSBuildWorkspace instance to improve performance and resource management
+                // Clean up old solution state before opening new solution
                 _workspace.CloseSolution();
                 var solution = await _workspace.OpenSolutionAsync(_currentSolutionPath);
                 
-                // 2. 创建符号缓存服务
+                // 2. Create symbol cache service
                 var symbolCacheLogger = _logger as ILogger<SymbolCacheService>;
                 _symbolCache = new SymbolCacheService(solution, _currentNamespacePrefixes, symbolCacheLogger);
                 await _symbolCache.InitializeAsync();
@@ -127,17 +127,17 @@ namespace RoslynMCP.SymbolCache
                 _isLoaded = true;
                 _logger.LogInformation("Solution loaded and symbol cache initialized successfully: {Path}", _currentSolutionPath);
 
-                var status = $"✅ 解决方案已成功加载: {Path.GetFileName(_currentSolutionPath)}\n" +
-                             $"📁 路径: {_currentSolutionPath}\n" +
-                             $"🏷️ 命名空间过滤器: {(_currentNamespacePrefixes?.Any() == true ? string.Join(", ", _currentNamespacePrefixes) : "无")}\n" +
-                             $"💾 符号缓存: 已初始化 ✅";
+                var status = $"✅ Solution loaded successfully: {Path.GetFileName(_currentSolutionPath)}\n" +
+                             $"📁 Path: {_currentSolutionPath}\n" +
+                             $"🏷️ Namespace filters: {(_currentNamespacePrefixes?.Any() == true ? string.Join(", ", _currentNamespacePrefixes) : "None")}\n" +
+                             $"💾 Symbol cache: Initialized ✅";
                 return status;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to load solution: {Path}", solutionPath);
                 _isLoaded = false;
-                return $"❌ 加载解决方案时发生错误: {ex.Message}";
+                return $"❌ Error occurred while loading solution: {ex.Message}";
             }
         }
 
@@ -145,19 +145,19 @@ namespace RoslynMCP.SymbolCache
         {
             if (!_isLoaded || string.IsNullOrEmpty(_currentSolutionPath))
             {
-                return "📋 **解决方案状态**: 未加载\n" +
-                       "💡 使用解决方案管理器加载解决方案文件";
+                return "📋 **Solution Status**: Not loaded\n" +
+                       "💡 Use solution manager to load solution file";
             }
 
             var fileName = Path.GetFileName(_currentSolutionPath);
             var directory = Path.GetDirectoryName(_currentSolutionPath);
 
-            var status = $"📋 **解决方案状态**: 已加载 ✅\n" +
-                        $"📁 **文件名**: {fileName}\n" +
-                        $"📂 **目录**: {directory}\n" +
-                        $"🏷️ **命名空间过滤器**: {(_currentNamespacePrefixes?.Any() == true ? string.Join(", ", _currentNamespacePrefixes) : "无")}\n" +
-                        $"🔧 **完整路径**: {_currentSolutionPath}\n" +
-                        $"💾 **符号缓存**: {(_symbolCache?.IsInitialized == true ? "已初始化 ✅" : "未初始化 ❌")}";
+            var status = $"📋 **Solution Status**: Loaded ✅\n" +
+                        $"📁 **File Name**: {fileName}\n" +
+                        $"📂 **Directory**: {directory}\n" +
+                        $"🏷️ **Namespace Filters**: {(_currentNamespacePrefixes?.Any() == true ? string.Join(", ", _currentNamespacePrefixes) : "None")}\n" +
+                        $"🔧 **Full Path**: {_currentSolutionPath}\n" +
+                        $"💾 **Symbol Cache**: {(_symbolCache?.IsInitialized == true ? "Initialized ✅" : "Not initialized ❌")}";
 
             return status;
         }

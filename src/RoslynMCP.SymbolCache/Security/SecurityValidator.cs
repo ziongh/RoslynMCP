@@ -4,12 +4,13 @@ using Microsoft.Extensions.Logging;
 namespace RoslynMCP.SymbolCache.Security
 {
     /// <summary>
-    /// 安全验证器，用于验证路径和输入的安全性
+    /// Security validator for validating path and input security
     /// </summary>
     public class SecurityValidator
     {
         private readonly HashSet<string> _allowedExtensions = new() { ".sln", ".csproj", ".cs" };
-        private readonly Regex _safePath = new(@"^[a-zA-Z]:[\\/][^<>:|?*]+$");
+        private readonly Regex _windowsRootedPath = new(@"^[a-zA-Z]:[\\/][^<>:|?*]+$");
+        private readonly Regex _unixRootedPath = new(@"^/[^\0<>:|?*]+$");
         private readonly ILogger<SecurityValidator> _logger;
         
         public SecurityValidator(ILogger<SecurityValidator> logger)
@@ -18,57 +19,57 @@ namespace RoslynMCP.SymbolCache.Security
         }
         
         /// <summary>
-        /// 验证解决方案文件路径的安全性
+        /// Validate the security of solution file paths
         /// </summary>
         public bool ValidateSolutionPath(string path)
         {
             if (string.IsNullOrWhiteSpace(path))
             {
-                _logger.LogWarning("解决方案路径为空");
+                _logger.LogWarning("Solution path is empty");
                 return false;
             }
             
-            // 检查路径遍历攻击
+            // Check for path traversal attacks
             if (path.Contains("..") || path.Contains("~"))
             {
-                _logger.LogWarning("检测到潜在的路径遍历攻击: {Path}", path);
+                _logger.LogWarning("Potential path traversal attack detected: {Path}", path);
                 return false;
             }
             
-            // 验证路径格式
-            if (!_safePath.IsMatch(path))
+            // Validate path format
+            if (!_windowsRootedPath.IsMatch(path) && !_unixRootedPath.IsMatch(path))
             {
-                _logger.LogWarning("不安全的路径格式: {Path}", path);
+                _logger.LogWarning("Unsafe path format: {Path}", path);
                 return false;
             }
             
-            // 检查文件扩展名
+            // Check file extension
             var extension = Path.GetExtension(path);
             if (!_allowedExtensions.Contains(extension))
             {
-                _logger.LogWarning("不允许的文件扩展名: {Extension} in {Path}", extension, path);
+                _logger.LogWarning("Disallowed file extension: {Extension} in {Path}", extension, path);
                 return false;
             }
             
-            // 验证文件存在且可访问
+            // Validate file exists and is accessible
             try
             {
                 var exists = File.Exists(path);
                 if (!exists)
                 {
-                    _logger.LogWarning("文件不存在: {Path}", path);
+                    _logger.LogWarning("File does not exist: {Path}", path);
                 }
                 return exists;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "访问文件失败: {Path}", path);
+                _logger.LogError(ex, "Failed to access file: {Path}", path);
                 return false;
             }
         }
         
         /// <summary>
-        /// 清理搜索模式，移除潜在危险字符
+        /// Clean search pattern, remove potentially dangerous characters
         /// </summary>
         public string SanitizeSearchPattern(string pattern)
         {
@@ -80,14 +81,14 @@ namespace RoslynMCP.SymbolCache.Security
         }
 
         /// <summary>
-        /// 验证缓存键的安全性
+        /// Validate the security of cache keys
         /// </summary>
         public bool ValidateCacheKey(string key)
         {
             if (string.IsNullOrWhiteSpace(key))
                 return false;
 
-            // 缓存键应该只包含安全字符
+            // Cache key should only contain safe characters
             return Regex.IsMatch(key, @"^[a-zA-Z0-9._-]+$");
         }
     }

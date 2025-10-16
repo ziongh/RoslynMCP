@@ -13,7 +13,7 @@ namespace RoslynMCP.MCP.Tools
     public static partial class RoslynAnalysisTools
     {
         /// <summary>
-        /// 查找符号引用
+        /// Find symbol references
         /// </summary>
         [McpServerTool, Description("Find all references to any specific symbol, including classes, methods, properties, fields, etc.")]
         public static async Task<string> FindReferences(
@@ -32,10 +32,10 @@ namespace RoslynMCP.MCP.Tools
                 var logger = serviceProvider?.GetService<ILogger>();
                 var solutionmcpServiceManager = serviceProvider?.GetService<IMCPServiceManager>();
 
-                // 检查解决方案是否已加载
+                // Check if solution is loaded
                 if (solutionmcpServiceManager == null || !solutionmcpServiceManager.IsLoaded)
                 {
-                    return "❌ 没有加载解决方案。请先使用 `SwitchSolution` 工具加载解决方案文件。";
+                    return "❌ No solution is loaded. Please use the `SwitchSolution` tool first to load a solution file.";
                 }
 
                 var solutionPath = solutionmcpServiceManager.CurrentSolutionPath!;
@@ -45,29 +45,29 @@ namespace RoslynMCP.MCP.Tools
 
                 if (string.IsNullOrWhiteSpace(symbolName))
                 {
-                    return "❌ 符号名称不能为空。";
+                    return "❌ Symbol name cannot be empty.";
                 }
 
-                // 获取查询服务
+                // Get query service
                 var queryService = serviceProvider?.GetService<IQueryService>();
                 if (queryService == null)
                 {
-                    return "❌ 查询服务不可用。";
+                    return "❌ Query service is not available.";
                 }
 
-                logger?.LogInformation("查找引用: {SymbolName} 在解决方案: {SolutionPath}", symbolName, solutionPath);
+                logger?.LogInformation("Finding references: {SymbolName} in solution: {SolutionPath}", symbolName, solutionPath);
 
-                // 确保解决方案已加载且服务已初始化
+                // Ensure solution is loaded and services are initialized
                 var (success, error) = await EnsureSolutionLoadedAsync(serviceProvider, logger);
                 if (!success)
                 {
                     return $"Error: {error}";
                 }
 
-                // 查找引用
+                // Find references
                 var references = await queryService.FindReferencesAsync(symbolName);
 
-                // 应用过滤器
+                // Apply filters
                 var filteredReferences = references.AsEnumerable();
                 
                 if (excludeGeneratedFiles)
@@ -80,7 +80,7 @@ namespace RoslynMCP.MCP.Tools
                     filteredReferences = filteredReferences.Where(r => !r.IsDefinition);
                 }
 
-                // 格式化结果
+                // Format results
                 var results = new StringBuilder();
                 results.AppendLine("# Reference Search Results");
                 results.AppendLine();
@@ -109,7 +109,7 @@ namespace RoslynMCP.MCP.Tools
                 }
                 results.AppendLine();
 
-                // 按文件分组显示
+                // Display grouped by file
                 var groupedByFile = referenceList.GroupBy(r => r.DocumentPath).OrderBy(g => Path.GetFileName(g.Key));
                 
                 foreach (var fileGroup in groupedByFile)
@@ -123,7 +123,7 @@ namespace RoslynMCP.MCP.Tools
 
                     foreach (var reference in fileGroup.OrderBy(r => r.LineNumber))
                     {
-                        var kindIndicator = reference.IsDefinition ? "🔷 **定义**" : "🔸 **引用**";
+                        var kindIndicator = reference.IsDefinition ? "🔷 **Definition**" : "🔸 **Reference**";
                         results.AppendLine($"{kindIndicator} Line {reference.LineNumber}:{reference.ColumnNumber} ({reference.ReferenceKind})");
 
                         if (!string.IsNullOrEmpty(reference.Context))
@@ -136,19 +136,19 @@ namespace RoslynMCP.MCP.Tools
                     }
                 }
 
-                logger?.LogInformation("引用查找完成，找到 {Count} 个引用", referenceList.Count);
+                logger?.LogInformation("Reference search completed, found {Count} references", referenceList.Count);
                 return results.ToString();
             }
             catch (Exception ex)
             {
                 var logger = serviceProvider?.GetService<ILogger>();
-                logger?.LogError(ex, "引用查找失败: {SymbolName}", symbolName);
+                logger?.LogError(ex, "Reference search failed: {SymbolName}", symbolName);
                 return $"Error: An unexpected error occurred while finding references: {ex.Message}";
             }
         }
         
         /// <summary>
-        /// 获取符号的继承层次结构
+        /// Get the inheritance hierarchy for a symbol
         /// </summary>
         [McpServerTool, Description("Get the inheritance hierarchy for a class or interface")]
         public static async Task<string> GetInheritanceHierarchy(
@@ -227,7 +227,7 @@ namespace RoslynMCP.MCP.Tools
         }
 
         /// <summary>
-        /// 获取方法体内的调用
+        /// Get method calls within a method body
         /// </summary>
         [McpServerTool, Description("Get all method calls within a specific method body. Analyzes method invocations and provides detailed call information.")]
         public static async Task<string> GetMethodBodyInvocations(
@@ -267,17 +267,17 @@ namespace RoslynMCP.MCP.Tools
                 var invocationList = invocations.ToList();
                 if (!invocationList.Any())
                 {
-                    results.AppendLine("## 📝 分析结果");
+                    results.AppendLine("## 📝 Analysis Results");
                     results.AppendLine();
-                    results.AppendLine("**无法找到方法调用**。这可能是由于以下原因：");
-                    results.AppendLine("- 方法体为空或只包含简单语句。");
-                    results.AppendLine("- 方法名称不正确或在指定的项目范围中不存在。");
-                    results.AppendLine("- 方法过于复杂或包含当前工具无法分析的特殊语法结构。");
+                    results.AppendLine("**Unable to find method calls**. This may be due to the following reasons:");
+                    results.AppendLine("- The method body is empty or contains only simple statements.");
+                    results.AppendLine("- The method name is incorrect or does not exist in the specified project scope.");
+                    results.AppendLine("- The method is too complex or contains special syntax structures that the current tool cannot analyze.");
                     results.AppendLine();
-                    results.AppendLine("**建议尝试**：");
-                    results.AppendLine("- 检查方法名称和项目名称是否正确。");
-                    results.AppendLine("- 使用 `GetSourceCode` 直接查看方法的源码。");
-                    results.AppendLine("- 使用 `SearchSymbols` 在更广的范围内查找相似的方法名。");
+                    results.AppendLine("**Suggestions to try**:");
+                    results.AppendLine("- Check if the method name and project name are correct.");
+                    results.AppendLine("- Use `GetSourceCode` to directly view the method's source code.");
+                    results.AppendLine("- Use `SearchSymbols` to find similar method names in a broader scope.");
                     return results.ToString();
                 }
 
@@ -288,7 +288,7 @@ namespace RoslynMCP.MCP.Tools
 
                 if (methodSymbol != null)
                 {
-                    results.AppendLine($"*分析的目标方法: `{methodSymbol.ToDisplayString()}`*");
+                    results.AppendLine($"*Target method for analysis: `{methodSymbol.ToDisplayString()}`*");
                     results.AppendLine();
                 }
 

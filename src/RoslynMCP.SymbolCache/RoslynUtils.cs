@@ -3,12 +3,12 @@ using Microsoft.CodeAnalysis;
 namespace RoslynMCP.SymbolCache
 {
     /// <summary>
-    /// Roslyn 工具类，提供符号遍历等功能
+    /// Roslyn utility class, provides symbol traversal and other functions
     /// </summary>
     public static class RoslynUtils
     {
         /// <summary>
-        /// 递归获取命名空间或类型下的所有符号（包括嵌套类型、方法、属性等）
+        /// Recursively get all symbols under a namespace or type (including nested types, methods, properties, etc.)
         /// </summary>
         public static IEnumerable<ISymbol> GetAllSymbols(INamespaceOrTypeSymbol container)
         {
@@ -29,7 +29,7 @@ namespace RoslynMCP.SymbolCache
                         yield return nestedSymbol;
                     }
                 }
-                // 提取方法和属性等成员
+                // Extract members like methods and properties
                 else if (member.Kind == SymbolKind.Method || member.Kind == SymbolKind.Property || member.Kind == SymbolKind.Field)
                 {
                     yield return member;
@@ -38,7 +38,7 @@ namespace RoslynMCP.SymbolCache
         }
 
         /// <summary>
-        /// 递归获取命名空间或类型下的所有类型（包括嵌套类型）
+        /// Recursively get all types under a namespace or type (including nested types)
         /// </summary>
         public static IEnumerable<INamedTypeSymbol> GetAllTypes(INamespaceOrTypeSymbol container)
         {
@@ -59,7 +59,7 @@ namespace RoslynMCP.SymbolCache
 
 
         /// <summary>
-        /// 获取成员的类型
+        /// Get member's type
         /// </summary>
         public static ITypeSymbol? GetMemberType(ISymbol member)
         {
@@ -72,7 +72,7 @@ namespace RoslynMCP.SymbolCache
         }
 
         /// <summary>
-        /// 获取底层类型（处理数组和集合类型）
+        /// Get underlying type (handle array and collection types)
         /// </summary>
         public static ITypeSymbol GetUnderlyingType(ITypeSymbol typeSymbol, out bool isCollection)
         {
@@ -97,7 +97,7 @@ namespace RoslynMCP.SymbolCache
         }
 
         /// <summary>
-        /// 构建继承关系映射
+        /// Build inheritance relationship mapping
         /// </summary>
         public static Dictionary<INamedTypeSymbol, List<INamedTypeSymbol>> BuildInheritanceMap(
             IEnumerable<INamedTypeSymbol> classSymbols, 

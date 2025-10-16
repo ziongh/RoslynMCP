@@ -14,7 +14,7 @@ namespace RoslynMCP.MCP.Tools
     public static partial class RoslynAnalysisTools
     {
         /// <summary>
-        /// 列出解决方案中的所有项目及其依赖
+        /// List all projects in the solution and their dependencies
         /// </summary>
         [McpServerTool, Description("List all projects in the current solution and their dependencies.")]
         public static async Task<string> ListProjects(
@@ -31,7 +31,7 @@ namespace RoslynMCP.MCP.Tools
                 var logger = serviceProvider?.GetService<ILogger>();
                 var solutionmcpServiceManager = serviceProvider?.GetService<IMCPServiceManager>();
 
-                // 设置默认值
+                // Set default values
                 maxPackages = ParameterUtils.GetMaxDisplayResultsDefault(maxPackages, serviceProvider);
 
                 if (solutionmcpServiceManager == null || !solutionmcpServiceManager.IsLoaded)
@@ -115,7 +115,7 @@ namespace RoslynMCP.MCP.Tools
         }
 
         /// <summary>
-        /// 获取单个项目的详细依赖
+        /// Get detailed dependencies for a single project
         /// </summary>
         [McpServerTool, Description("Get detailed dependencies for a single project")]
         public static async Task<string> GetProjectDependencies(

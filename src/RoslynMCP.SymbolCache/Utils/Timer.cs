@@ -4,7 +4,7 @@ using System.Diagnostics;
 namespace RoslynMCP.Core.Utils
 {
     /// <summary>
-    /// 用于测量和报告操作耗时的计时器工具类
+    /// Timer utility class for measuring and reporting operation duration
     /// </summary>
     public class Timer : IDisposable
     {
@@ -20,17 +20,17 @@ namespace RoslynMCP.Core.Utils
             
             if (_autoReport)
             {
-                Console.WriteLine($"开始执行: {_operationName}");
+                Console.WriteLine($"Starting execution: {_operationName}");
             }
         }
 
         /// <summary>
-        /// 获取当前已经过的时间
+        /// Get the current elapsed time
         /// </summary>
         public TimeSpan Elapsed => _stopwatch.Elapsed;
 
         /// <summary>
-        /// 停止计时并报告结果
+        /// Stop timing and report results
         /// </summary>
         public void Stop()
         {
@@ -45,16 +45,16 @@ namespace RoslynMCP.Core.Utils
         }
 
         /// <summary>
-        /// 手动报告时间（不停止计时器）
+        /// Manually report time (without stopping the timer)
         /// </summary>
         public void ReportTime()
         {
             var elapsed = _stopwatch.Elapsed;
-            Console.WriteLine($"完成: {_operationName} - 耗时: {FormatElapsed(elapsed)}");
+            Console.WriteLine($"Completed: {_operationName} - Duration: {FormatElapsed(elapsed)}");
         }
 
         /// <summary>
-        /// 创建一个子计时器，用于测量嵌套操作
+        /// Create a sub-timer for measuring nested operations
         /// </summary>
         public Timer CreateSubTimer(string subOperationName)
         {
@@ -62,26 +62,26 @@ namespace RoslynMCP.Core.Utils
         }
 
         /// <summary>
-        /// 格式化时间显示
+        /// Format time display
         /// </summary>
         private static string FormatElapsed(TimeSpan elapsed)
         {
             if (elapsed.TotalMinutes >= 1)
             {
-                return $"{elapsed.TotalMinutes:F1} 分钟";
+                return $"{elapsed.TotalMinutes:F1} minutes";
             }
             else if (elapsed.TotalSeconds >= 1)
             {
-                return $"{elapsed.TotalSeconds:F2} 秒";
+                return $"{elapsed.TotalSeconds:F2} seconds";
             }
             else
             {
-                return $"{elapsed.TotalMilliseconds:F0} 毫秒";
+                return $"{elapsed.TotalMilliseconds:F0} milliseconds";
             }
         }
 
         /// <summary>
-        /// IDisposable 实现，支持 using 语句自动计时
+        /// IDisposable implementation, supports automatic timing with using statement
         /// </summary>
         public void Dispose()
         {
@@ -89,7 +89,7 @@ namespace RoslynMCP.Core.Utils
         }
 
         /// <summary>
-        /// 静态方法，用于快速创建计时器
+        /// Static method for quickly creating a timer
         /// </summary>
         public static Timer Start(string operationName)
         {
