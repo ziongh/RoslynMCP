@@ -40,7 +40,7 @@ namespace RoslynMCP.MCP.Tools
 
                 var solutionPath = solutionmcpServiceManager.CurrentSolutionPath!;
 
-                // 设置默认值
+                // Apply default configuration values
                 maxResults = ParameterUtils.GetMaxDisplayResultsDefault(maxResults, serviceProvider);
 
                 if (string.IsNullOrWhiteSpace(symbolName))
@@ -115,7 +115,7 @@ namespace RoslynMCP.MCP.Tools
                 foreach (var fileGroup in groupedByFile)
                 {
                     var fileName = Path.GetFileName(fileGroup.Key);
-                    var normalizedPath = GetNormalizedPath(fileGroup.Key);
+                    var normalizedPath = GetNormalizedPath(fileGroup.Key, solutionPath);
                     
                     results.AppendLine($"## {fileName}");
                     results.AppendLine($"**Path**: `{normalizedPath}`");

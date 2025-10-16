@@ -96,18 +96,43 @@ namespace RoslynMCP.MCP.Tools
         /// <summary>
         /// Get normalized file path (relative to solution root directory)
         /// </summary>
-        private static string GetNormalizedPath(string filePath)
+        private static string GetNormalizedPath(string filePath, string? solutionPath)
         {
             if (string.IsNullOrEmpty(filePath)) return string.Empty;
 
-            // If it's an absolute path, try to convert to relative path
+            if (!string.IsNullOrEmpty(solutionPath))
+            {
+                var solutionDirectory = Path.GetDirectoryName(solutionPath);
+                if (!string.IsNullOrEmpty(solutionDirectory))
+                {
+                    try
+                    {
+                        var relativePath = Path.GetRelativePath(solutionDirectory, filePath);
+                        relativePath = relativePath.Replace('\\', '/');
+
+                        if (relativePath.StartsWith("./", StringComparison.Ordinal))
+                        {
+                            relativePath = relativePath[2..];
+                        }
+
+                        if (!string.IsNullOrEmpty(relativePath))
+                        {
+                            return relativePath;
+                        }
+                    }
+                    catch
+                    {
+                        // Fall back to default handling below
+                    }
+                }
+            }
+
             if (Path.IsPathRooted(filePath))
             {
-                // Can be further optimized here, calculate relative path based on solution path
                 return Path.GetFileName(filePath);
             }
 
-            return filePath;
+            return filePath.Replace('\\', '/');
         }
     }
 }
