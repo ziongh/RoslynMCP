@@ -45,5 +45,36 @@ namespace RoslynMCP.MCP.Tools
                 return $"❌ Error occurred while getting solution status: {ex.Message}";
             }
         }
+
+        [McpServerTool, Description("Reload the current solution from disk, refreshing all cached symbols. Use this tool after making code changes (adding/removing/modifying methods, properties, classes) to ensure the analysis cache reflects the latest state. This operation may take 30 seconds to 2 minutes for large solutions.")]
+        public static async Task<string> ReloadSolution(
+            IServiceProvider? serviceProvider = null)
+        {
+            try
+            {
+                var logger = serviceProvider?.GetService<ILogger>();
+                var mcpServiceManager = serviceProvider?.GetService<IMCPServiceManager>();
+
+                if (mcpServiceManager == null)
+                {
+                    logger?.LogError("MCPServiceManager service not available");
+                    return "❌ MCP service manager service unavailable";
+                }
+
+                if (!mcpServiceManager.IsLoaded)
+                {
+                    return "❌ No solution is currently loaded. Cannot reload.";
+                }
+
+                logger?.LogInformation("Reloading solution requested via MCP tool");
+                return await mcpServiceManager.ReloadSolutionAsync();
+            }
+            catch (Exception ex)
+            {
+                var logger = serviceProvider?.GetService<ILogger>();
+                logger?.LogError(ex, "Error reloading solution");
+                return $"❌ Error occurred while reloading solution: {ex.Message}";
+            }
+        }
     }
 }

@@ -56,6 +56,12 @@ namespace RoslynMCP.MCP.Services
         /// <param name="maxWaitMs">Maximum wait time (milliseconds)</param>
         /// <returns>Status information</returns>
         Task<string> GetStatusAsync(bool waitForLoading = true, int maxWaitMs = 30000);
+
+        /// <summary>
+        /// Reload the current solution from disk, refreshing all cached symbols
+        /// </summary>
+        /// <returns>Reload result message</returns>
+        Task<string> ReloadSolutionAsync();
     }
 
     /// <summary>
@@ -70,6 +76,7 @@ namespace RoslynMCP.MCP.Services
         private readonly AnalyzerOptions _options;
         private bool _isServicesInitialized;
         private readonly SemaphoreSlim _loadLock = new SemaphoreSlim(1, 1);
+        private List<string>? _currentNamespacePrefixes;
 
 
         public MCPServiceManager(
@@ -104,6 +111,9 @@ namespace RoslynMCP.MCP.Services
             try
             {
                 _logger.LogInformation("MCP service manager starting to load solution: {Path}", solutionPath);
+
+                // Store namespace prefixes for potential reload
+                _currentNamespacePrefixes = namespacePrefixes;
 
                 // 1. Use solution state manager to load solution and symbol cache
                 var loadResult = await _solutionStateManager.LoadSolutionAsync(solutionPath, namespacePrefixes);
@@ -263,6 +273,18 @@ namespace RoslynMCP.MCP.Services
             {
                 _logger.LogWarning(ex, "Failed to load default solution");
             }
+        }
+
+        public async Task<string> ReloadSolutionAsync()
+        {
+            if (string.IsNullOrEmpty(CurrentSolutionPath))
+            {
+                return "❌ No solution is currently loaded. Use LoadSolutionAsync first.";
+            }
+
+            _logger.LogInformation("Reloading solution from disk: {Path}", CurrentSolutionPath);
+            
+            return await LoadSolutionAsync(CurrentSolutionPath, _currentNamespacePrefixes);
         }
     }
 }

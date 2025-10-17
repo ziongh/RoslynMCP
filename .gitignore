@@ -8,3 +8,6 @@ obj/
 .openmcp/
 
 release/
+
+AGENTS.md
+specs/

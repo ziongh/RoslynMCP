@@ -23,7 +23,27 @@ Get the loading status of the current solution, service initialization informati
     }
     ```
 
+---
 
+#### **`ReloadSolution`**
+Reload the current solution from disk, refreshing all cached symbols. **Use this tool after making code changes** (adding/removing/modifying methods, properties, classes) to ensure the analysis cache reflects the latest state.
+
+*   **When to use**:
+    *   After adding new methods, properties, or classes to the codebase
+    *   After deleting or moving code between files
+    *   After refactoring that changes method signatures or inheritance
+    *   When line numbers or references seem stale or incorrect
+*   **Performance**: May take 30 seconds to 2 minutes for large solutions
+*   **Parameters**: None
+*   **Example**:
+    ```json
+    {
+      "name": "ReloadSolution",
+      "arguments": {}
+    }
+    ```
+
+---
 
 ### Category 2: Code Query and Analysis
 
