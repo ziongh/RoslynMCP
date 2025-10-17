@@ -1,4 +1,6 @@
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.MSBuild;
+using Microsoft.CodeAnalysis.Text;
 using Microsoft.Extensions.Logging;
 using RoslynMCP.Core.Interfaces;
 using static RoslynMCP.SymbolCache.RoslynUtils;
@@ -12,7 +14,8 @@ namespace RoslynMCP.SymbolCache
     /// </summary>
     public class SymbolCacheService : ISymbolCacheService
     {
-        private readonly Solution _solution;
+        private readonly MSBuildWorkspace _workspace;
+        private Solution _solution;
         private readonly ILogger<SymbolCacheService>? _logger;
         private readonly List<string> _namespacePrefixes;
         private readonly ConcurrentDictionary<string, ISymbol> _allSymbols = new();
@@ -20,9 +23,10 @@ namespace RoslynMCP.SymbolCache
         private bool _isInitialized;
         private DateTime _lastInitialized = DateTime.MinValue;
 
-        public SymbolCacheService(Solution solution, List<string>? namespacePrefixes = null, ILogger<SymbolCacheService>? logger = null)
+        public SymbolCacheService(MSBuildWorkspace workspace, List<string>? namespacePrefixes = null, ILogger<SymbolCacheService>? logger = null)
         {
-            _solution = solution;
+            _workspace = workspace;
+            _solution = workspace.CurrentSolution;
             _logger = logger;
             _namespacePrefixes = namespacePrefixes ?? new List<string>();
         }
@@ -104,14 +108,67 @@ namespace RoslynMCP.SymbolCache
 
             using var timer = Timer.Start("Symbol incremental update");
             
-            var changedFileSet = new HashSet<string>(changedFiles);
+            var changedFileSet = new HashSet<string>(changedFiles, StringComparer.OrdinalIgnoreCase);
 
-            // Remove old symbols from changed files
+            _logger?.LogInformation("Starting incremental update for {Count} files", changedFileSet.Count);
+
+            // Step 1: Update the solution with fresh file contents from disk
+            var currentSolution = _workspace.CurrentSolution;
+            var newSolution = currentSolution;
+            
+            foreach (var filePath in changedFiles)
+            {
+                try
+                {
+                    // Find the document in the solution
+                    var documentIds = currentSolution.GetDocumentIdsWithFilePath(filePath);
+                    if (!documentIds.Any())
+                    {
+                        _logger?.LogWarning("File not found in solution: {FilePath}", filePath);
+                        continue;
+                    }
+
+                    foreach (var documentId in documentIds)
+                    {
+                        var document = newSolution.GetDocument(documentId);
+                        if (document == null) continue;
+
+                        // Read fresh content from disk
+                        if (!File.Exists(filePath))
+                        {
+                            _logger?.LogWarning("File no longer exists on disk: {FilePath}", filePath);
+                            continue;
+                        }
+
+                        var newText = SourceText.From(await File.ReadAllTextAsync(filePath));
+                        var updatedDocument = document.WithText(newText);
+                        newSolution = updatedDocument.Project.Solution;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogError(ex, "Error updating file in solution: {FilePath}", filePath);
+                }
+            }
+
+            // Step 2: Apply changes to workspace (makes it "current")
+            if (!_workspace.TryApplyChanges(newSolution))
+            {
+                _logger?.LogError("Failed to apply solution changes to workspace");
+                throw new InvalidOperationException("Failed to apply solution changes to workspace");
+            }
+
+            // Step 3: Update the stored solution reference
+            _solution = _workspace.CurrentSolution;
+
+            // Step 4: Remove old symbols from changed files
             var symbolsToRemove = _allSymbols.Where(kv => 
             {
                 var location = kv.Value.Locations.FirstOrDefault()?.SourceTree?.FilePath;
                 return location != null && changedFileSet.Contains(location);
             }).ToList();
+
+            _logger?.LogDebug("Removing {Count} old symbols from changed files", symbolsToRemove.Count);
 
             foreach (var (id, _) in symbolsToRemove)
             {
@@ -119,30 +176,45 @@ namespace RoslynMCP.SymbolCache
                 _protoSymbols.TryRemove(id, out _);
             }
 
-            // Re-analyze changed files
-            var projects = _solution.Projects;
-            foreach (var project in projects)
+            // Step 5: Re-analyze changed files with fresh compilations
+            var affectedProjects = _solution.Projects
+                .Where(p => p.Documents.Any(d => d.FilePath != null && changedFileSet.Contains(d.FilePath)))
+                .ToList();
+
+            _logger?.LogDebug("Recompiling {Count} affected projects", affectedProjects.Count);
+
+            foreach (var project in affectedProjects)
             {
-                var compilation = await project.GetCompilationAsync();
-                if (compilation == null) continue;
-
-                var projectSymbols = GetAllSymbols(compilation.GlobalNamespace)
-                    .Where(symbol => 
-                    {
-                        var location = symbol.Locations.FirstOrDefault()?.SourceTree?.FilePath;
-                        return location != null && changedFileSet.Contains(location);
-                    })
-                    .Where(MatchesNamespaceFilter) // Also filter namespaces first to improve performance
-                    .ToList();
-
-                foreach (var symbol in projectSymbols)
+                try
                 {
-                    var id = symbol.ToDisplayString();
-                    _allSymbols[id] = symbol;
+                    var compilation = await project.GetCompilationAsync();
+                    if (compilation == null) continue;
+
+                    var projectSymbols = GetAllSymbols(compilation.GlobalNamespace)
+                        .Where(symbol => 
+                        {
+                            var location = symbol.Locations.FirstOrDefault()?.SourceTree?.FilePath;
+                            return location != null && changedFileSet.Contains(location);
+                        })
+                        .Where(MatchesNamespaceFilter)
+                        .ToList();
+
+                    _logger?.LogDebug("Found {Count} new symbols in project {ProjectName}", projectSymbols.Count, project.Name);
+
+                    foreach (var symbol in projectSymbols)
+                    {
+                        var id = symbol.ToDisplayString();
+                        _allSymbols[id] = symbol;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogError(ex, "Error recompiling project: {ProjectName}", project.Name);
                 }
             }
 
-            Console.WriteLine($"Incrementally updated symbols in {changedFileSet.Count} files");
+            _logger?.LogInformation("Incrementally updated symbols in {Count} files. Total symbols: {TotalSymbols}", 
+                changedFileSet.Count, _allSymbols.Count);
         }
 
         public void ClearCache()

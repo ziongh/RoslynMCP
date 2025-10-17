@@ -45,6 +45,29 @@ Reload the current solution from disk, refreshing all cached symbols. **Use this
 
 ---
 
+#### **`NotifyCodeChanges`**
+Notify the server that specific code files have been modified, triggering a fast incremental cache update. **Much faster than ReloadSolution** (2-5 seconds vs 30s-2min) while accurately updating symbols, references, and line numbers.
+
+*   **When to use**:
+    *   After making targeted code changes to specific files
+    *   When you know exactly which files changed
+    *   For iterative development with frequent small changes
+    *   When speed is important and you're modifying <10 files at a time
+*   **Performance**: 2-5 seconds for most changes
+*   **Parameters**:
+    *   `changedFiles` (string array, **required**): File paths that have been modified. Can be absolute paths or relative to solution root.
+*   **Example**:
+    ```json
+    {
+      "name": "NotifyCodeChanges",
+      "arguments": {
+        "changedFiles": ["src/MyProject/Services/UserService.cs", "src/MyProject/Models/User.cs"]
+      }
+    }
+    ```
+
+---
+
 ### Category 2: Code Query and Analysis
 
 These tools are used for deep exploration and analysis of loaded solutions.

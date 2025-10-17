@@ -119,9 +119,9 @@ namespace RoslynMCP.SymbolCache
                 _workspace.CloseSolution();
                 var solution = await _workspace.OpenSolutionAsync(_currentSolutionPath);
                 
-                // 2. Create symbol cache service
+                // 2. Create symbol cache service - pass workspace instead of solution for incremental updates
                 var symbolCacheLogger = _logger as ILogger<SymbolCacheService>;
-                _symbolCache = new SymbolCacheService(solution, _currentNamespacePrefixes, symbolCacheLogger);
+                _symbolCache = new SymbolCacheService(_workspace, _currentNamespacePrefixes, symbolCacheLogger);
                 await _symbolCache.InitializeAsync();
 
                 _isLoaded = true;

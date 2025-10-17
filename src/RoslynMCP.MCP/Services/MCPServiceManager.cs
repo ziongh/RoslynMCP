@@ -62,6 +62,13 @@ namespace RoslynMCP.MCP.Services
         /// </summary>
         /// <returns>Reload result message</returns>
         Task<string> ReloadSolutionAsync();
+
+        /// <summary>
+        /// Notify server that code files have been modified, triggering incremental cache update
+        /// </summary>
+        /// <param name="changedFiles">Array of absolute file paths that have been modified</param>
+        /// <returns>Update result message</returns>
+        Task<string> NotifyCodeChangesAsync(string[] changedFiles);
     }
 
     /// <summary>
@@ -285,6 +292,35 @@ namespace RoslynMCP.MCP.Services
             _logger.LogInformation("Reloading solution from disk: {Path}", CurrentSolutionPath);
             
             return await LoadSolutionAsync(CurrentSolutionPath, _currentNamespacePrefixes);
+        }
+
+        public async Task<string> NotifyCodeChangesAsync(string[] changedFiles)
+        {
+            if (!IsLoaded || SymbolCache == null)
+            {
+                return "❌ No solution is currently loaded. Cannot update symbols.";
+            }
+
+            if (changedFiles == null || changedFiles.Length == 0)
+            {
+                return "⚠️ No files specified for update.";
+            }
+
+            try
+            {
+                _logger.LogInformation("Updating symbols for {Count} changed files", changedFiles.Length);
+                
+                await SymbolCache.UpdateSymbolsAsync(changedFiles);
+                
+                return $"✅ Successfully updated symbols for {changedFiles.Length} file(s).\n" +
+                       $"💡 Cache has been refreshed incrementally.";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to update symbols for changed files");
+                return $"❌ Error updating symbols: {ex.Message}\n" +
+                       $"💡 Try using ReloadSolution for a full refresh.";
+            }
         }
     }
 }
