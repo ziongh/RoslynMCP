@@ -147,7 +147,7 @@ namespace RoslynMCP.MCP.Tools
                 }
 
                 results.AppendLine("---");
-                results.AppendLine("💡 **Tip**: To get more information about a symbol, including its full file path, use the `get_symbol_details` tool with the symbol's `FullName`.");
+                results.AppendLine("💡 **Tip**: To get more information about a symbol, including its solution-relative path, use the `get_symbol_details` tool with the symbol's `FullName`.");
                 results.AppendLine();
 
                 logger?.LogInformation("Search completed, found {Count} symbols", resultList.Count);
