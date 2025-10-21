@@ -228,6 +228,13 @@ namespace RoslynMCP.MCP
             services.AddSingleton<DiagnosticLogger>();
             services.AddSingleton<SecurityValidator>();
             
+            // Memory cache for decompilation
+            services.AddSingleton<IMemoryCache>(provider => 
+                new MemoryCache(new MemoryCacheOptions 
+                { 
+                    SizeLimit = 100 * 1024 * 1024 // 100MB cache limit
+                }));
+            
             // Register MSBuildWorkspace as singleton service to improve performance
             services.AddSingleton<MSBuildWorkspace>(provider => MSBuildWorkspace.Create());
             
@@ -242,6 +249,9 @@ namespace RoslynMCP.MCP
             
             // MCP application-level service manager
             services.AddSingleton<IMCPServiceManager, MCPServiceManager>();
+
+            // Decompilation service
+            services.AddSingleton<IDecompilationService, DecompilationService>();
 
             // Query and analysis services - use singleton pattern to avoid repeated initialization
             services.AddSingleton<IQueryService, QueryService>();

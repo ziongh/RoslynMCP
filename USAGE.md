@@ -100,6 +100,8 @@ Search for symbols in C# code using wildcards (`*`, `?`).
 #### **`GetSymbolDetails`**
 Get the complete aggregated analysis of a symbol, including source code, references, and inheritance hierarchy.
 
+**⚡ Automatic Decompilation**: When analyzing symbols from NuGet packages or third-party assemblies, this tool automatically decompiles them and marks them with a 🔷 **Metadata** indicator, so you know when you're inspecting decompiled code versus your solution's source code.
+
 *   **Parameters**:
     *   `symbolName` (string, **required**): Exact symbol name or fully qualified name.
     *   `includeSourceCode` (bool, *optional*): Whether to include source code in the response (Default: `true`).
@@ -117,21 +119,51 @@ Get the complete aggregated analysis of a symbol, including source code, referen
       }
     }
     ```
+*   **Metadata Symbol Indicator**: When analyzing third-party symbols, the response includes:
+    ```markdown
+    ## 📋 Basic Information
+    - **Source Type**: 🔷 **Metadata** (from NuGet/third-party assembly - decompiled)
+    ```
 
 ---
 
 #### **`GetSourceCode`**
 Get the complete source code of a specific symbol (class, method, property, etc.).
 
+**⚡ Automatic Decompilation**: If the symbol exists in a NuGet package or third-party assembly (not in your solution's source code), RoslynMCP will automatically decompile it using ILSpy. This allows you to inspect the implementation of any .NET framework class or library symbol.
+
 *   **Parameters**:
     *   `symbolName` (string, **required**): Exact symbol name or fully qualified name.
-*   **Example**:
+*   **Example (Source Code)**:
     ```json
     {
       "name": "GetSourceCode",
       "arguments": {
         "symbolName": "MyNamespace.MyClass.MyMethod"
       }
+    }
+    ```
+*   **Example (NuGet Package - Automatic Decompilation)**:
+    ```json
+    {
+      "name": "GetSourceCode",
+      "arguments": {
+        "symbolName": "System.Collections.Generic.List<T>"
+      }
+    }
+    ```
+    **Response**: Returns decompiled source code with header comments indicating it was decompiled from metadata:
+    ```csharp
+    // Decompiled from metadata
+    // Assembly: System.Collections
+    
+    namespace System.Collections.Generic
+    {
+        public class List<T> : IList<T>, ...
+        {
+            private T[] _items;
+            // ... full implementation
+        }
     }
     ```
 
@@ -247,4 +279,114 @@ Get detailed dependencies of a single project (project references and package re
       }
     }
     ```
+
+---
+
+## 🔷 Automatic Decompilation Feature
+
+RoslynMCP includes **automatic decompilation** of symbols from NuGet packages, third-party assemblies, and .NET framework libraries using **ILSpy**. This powerful feature enables complete code visibility across your entire development ecosystem.
+
+### How It Works
+
+When you request source code for a symbol:
+
+1. **Source Code First**: If the symbol is defined in your solution's source files, the actual source code is returned
+2. **Automatic Fallback**: If the symbol exists only in compiled assemblies (metadata), RoslynMCP automatically decompiles it
+3. **Clear Attribution**: Decompiled code includes header comments indicating the source assembly
+4. **Smart Caching**: Results are cached for 30 minutes to optimize performance
+
+### Supported Symbols
+
+The decompilation feature works with:
+- ✅ .NET Framework types (e.g., `System.String`, `List<T>`, `HttpClient`)
+- ✅ NuGet package symbols (e.g., `Microsoft.Extensions.Logging.ILogger`)
+- ✅ Third-party library classes, methods, properties, fields, and events
+- ✅ Any compiled assembly accessible to your solution
+
+### When to Use
+
+**Perfect for:**
+- Understanding how framework/library methods are implemented
+- Debugging issues in third-party dependencies
+- Learning best practices from well-written library code
+- Getting complete context when AI analyzes code using external APIs
+
+**Example Use Cases:**
+1. **Framework Exploration**: "Show me how `List<T>.Sort()` is implemented"
+2. **Library Understanding**: "What does `ILogger.LogInformation` actually do?"
+3. **Dependency Analysis**: "How does this NuGet package method handle errors?"
+
+### Example: Decompiling .NET Framework Type
+
+**Request:**
+```json
+{
+  "name": "GetSourceCode",
+  "arguments": {
+    "symbolName": "System.Text.StringBuilder"
+  }
+}
+```
+
+**Response:**
+```csharp
+// Decompiled from metadata
+// Assembly: System.Runtime
+
+using System;
+
+namespace System.Text
+{
+    public sealed class StringBuilder
+    {
+        private char[] m_ChunkChars;
+        private StringBuilder m_ChunkPrevious;
+        private int m_ChunkLength;
+        private int m_ChunkOffset;
+        
+        public StringBuilder() { }
+        public StringBuilder(int capacity) { }
+        
+        public StringBuilder Append(string value)
+        {
+            // ... decompiled implementation
+        }
+        
+        // ... more members
+    }
+}
+```
+
+### Visual Indicators
+
+When using `GetSymbolDetails`, metadata symbols are clearly marked:
+
+```markdown
+## 📋 Basic Information
+- **Name**: `List<T>`
+- **Namespace**: System.Collections.Generic
+- **Assembly**: System.Collections
+- **Source Type**: 🔷 **Metadata** (from NuGet/third-party assembly - decompiled)
+```
+
+vs. source code symbols:
+
+```markdown
+- **Source Type**: 📄 **Source Code** (from solution)
+```
+
+### Performance Notes
+
+- **First Request**: 1-2 seconds for large types (decompilation + caching)
+- **Subsequent Requests**: <100ms (served from cache)
+- **Cache Expiration**: 30 minutes of inactivity
+- **Memory Limit**: 100MB cache size
+
+### Limitations
+
+1. **Assembly Access**: Can only decompile assemblies accessible from the solution's runtime directory
+2. **Obfuscated Code**: Decompiled code from obfuscated assemblies may have meaningless variable names
+3. **Approximate Representation**: Decompiled code shows a reconstructed version, not the exact original source
+
+For technical implementation details, see [specs/DECOMPILATION_FEATURE.md](../specs/DECOMPILATION_FEATURE.md)
 

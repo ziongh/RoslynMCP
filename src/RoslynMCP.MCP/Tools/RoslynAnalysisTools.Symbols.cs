@@ -236,6 +236,15 @@ namespace RoslynMCP.MCP.Tools
                         results.AppendLine($"- **Assembly**: {symbolDetails.AssemblyName}");
                         results.AppendLine($"- **Accessibility**: {symbolDetails.Accessibility}");
                         results.AppendLine($"- **Source Location**: `{symbolDetails.SourceLocation}`");
+                        
+                        if (symbolDetails.IsFromMetadata)
+                        {
+                            results.AppendLine($"- **Source Type**: 🔷 **Metadata** (from NuGet/third-party assembly - decompiled)");
+                        }
+                        else
+                        {
+                            results.AppendLine($"- **Source Type**: 📄 **Source Code** (from solution)");
+                        }
 
                         if (!string.IsNullOrEmpty(symbolDetails.Documentation))
                         {

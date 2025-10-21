@@ -65,6 +65,11 @@ namespace RoslynMCP.Query.Services
         Task<string?> GetSourceCodeAsync(string symbolName, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Get source code of symbol, with decompilation fallback for metadata symbols
+        /// </summary>
+        Task<string?> GetSourceCodeAsync(string symbolName, bool allowDecompilation, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Get file source code
         /// </summary>
         Task<string?> GetFileContentAsync(string filePath, CancellationToken cancellationToken = default);
@@ -127,6 +132,7 @@ namespace RoslynMCP.Query.Services
         public IEnumerable<string> Interfaces { get; set; } = Enumerable.Empty<string>();
         public string Documentation { get; set; } = string.Empty;
         public string SourceLocation { get; set; } = string.Empty;
+        public bool IsFromMetadata { get; set; } = false;
     }
 
     /// <summary>

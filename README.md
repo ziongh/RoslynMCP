@@ -135,3 +135,57 @@ After the server successfully starts and loads the solution, the AI Agent can ca
 For the complete list of available tools, please refer to:
 
 ➡️ **[Roslyn MCP Interface Description](./USAGE.md)**
+
+---
+
+## ✨ Advanced Features
+
+### 🔷 Automatic Decompilation of NuGet Packages and Third-Party Libraries
+
+RoslynMCP now supports **automatic decompilation** of symbols from NuGet packages and third-party assemblies. When you request source code for symbols that exist only in compiled assemblies (such as framework types or library classes), the server automatically decompiles them using **ILSpy**.
+
+**What this means:**
+- You can inspect the implementation of **any .NET framework class** (e.g., `List<T>`, `HttpClient`, `StringBuilder`)
+- You can view the source code of **NuGet package symbols** (e.g., `Microsoft.Extensions.Logging.ILogger`)
+- AI agents get **complete context** when analyzing code that uses external libraries
+
+**How it works:**
+1. When you request source code via `GetSourceCode` or `GetSymbolDetails`
+2. If the symbol exists only in metadata (no source files available)
+3. The server automatically locates the assembly DLL and decompiles it
+4. Results are cached for fast subsequent access
+5. Decompiled code is clearly marked with header comments
+
+**Example:**
+```json
+{
+  "name": "GetSourceCode",
+  "arguments": {
+    "symbolName": "System.Collections.Generic.List<T>"
+  }
+}
+```
+
+**Response:**
+```csharp
+// Decompiled from metadata
+// Assembly: System.Collections
+
+namespace System.Collections.Generic
+{
+    public class List<T> : IList<T>, ICollection<T>, ...
+    {
+        private T[] _items;
+        private int _size;
+        // ... full decompiled implementation
+    }
+}
+```
+
+**Benefits:**
+- ✅ **Seamless**: Works automatically without configuration
+- ✅ **Fast**: Decompiled code is cached (30-minute expiration)
+- ✅ **Clear**: Metadata symbols are marked with 🔷 indicator in `GetSymbolDetails`
+- ✅ **Comprehensive**: AI agents can analyze your entire codebase AND its dependencies
+
+For technical details, see [DECOMPILATION_FEATURE.md](./specs/DECOMPILATION_FEATURE.md)

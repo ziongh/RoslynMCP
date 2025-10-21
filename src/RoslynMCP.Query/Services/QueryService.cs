@@ -12,6 +12,7 @@ namespace RoslynMCP.Query.Services
     public class QueryService : IQueryService, IDisposable
     {
         private readonly ILogger<QueryService> _logger;
+        private readonly IDecompilationService? _decompilationService;
         
         private ISymbolCacheService? _symbolCache;
         private bool _isDisposed;
@@ -23,9 +24,12 @@ namespace RoslynMCP.Query.Services
         public IReadOnlyDictionary<string, INamedTypeSymbol>? ProtoSymbols => _symbolCache?.ProtoSymbols;
         public ISymbolCacheService? SymbolCacheService => _symbolCache;
 
-        public QueryService(ILogger<QueryService> logger)
+        public QueryService(
+            ILogger<QueryService> logger, 
+            IDecompilationService? decompilationService = null)
         {
             _logger = logger;
+            _decompilationService = decompilationService;
         }
 
         public Task<bool> InitializeAsync(ISymbolCacheService symbolCache, CancellationToken cancellationToken = default)
@@ -236,6 +240,8 @@ namespace RoslynMCP.Query.Services
         
         private SymbolDetails ConvertToSymbolDetails(ISymbol symbol)
         {
+            var isMetadata = _decompilationService?.IsMetadataSymbol(symbol) ?? false;
+            
             var details = new SymbolDetails
             {
                 Name = symbol.Name,
@@ -245,7 +251,8 @@ namespace RoslynMCP.Query.Services
                 Namespace = symbol.ContainingNamespace?.ToDisplayString() ?? "",
                 AssemblyName = symbol.ContainingAssembly?.Name ?? "",
                 Documentation = GetDocumentation(symbol),
-                SourceLocation = GetSourceLocation(symbol)
+                SourceLocation = GetSourceLocation(symbol),
+                IsFromMetadata = isMetadata
             };
 
             if (symbol is INamedTypeSymbol namedTypeSymbol)
@@ -483,10 +490,14 @@ namespace RoslynMCP.Query.Services
             return allDeclarations.FirstOrDefault(); // Return first of the unfiltered list if no qualified match
         }
 
-        public async Task<string?> GetSourceCodeAsync(string symbolName, CancellationToken cancellationToken = default)
+        public async Task<string?> GetSourceCodeAsync(string symbolName, CancellationToken cancellationToken = default) =>
+            await GetSourceCodeAsync(symbolName, allowDecompilation: true, cancellationToken);
+
+        public async Task<string?> GetSourceCodeAsync(string symbolName, bool allowDecompilation, CancellationToken cancellationToken = default)
         {
             EnsureInitialized();
-            _logger.LogDebug("Getting source code for symbol: {SymbolName}", symbolName);
+            _logger.LogDebug("Getting source code for symbol: {SymbolName} (decompilation: {AllowDecompilation})", 
+                symbolName, allowDecompilation);
 
             var symbol = await FindSymbolAsync(symbolName, cancellationToken);
 
@@ -499,6 +510,21 @@ namespace RoslynMCP.Query.Services
             var syntaxRefs = symbol.DeclaringSyntaxReferences;
             if (!syntaxRefs.Any())
             {
+                if (allowDecompilation && _decompilationService != null && 
+                    _decompilationService.IsMetadataSymbol(symbol))
+                {
+                    _logger.LogInformation("Symbol {SymbolName} has no source, attempting decompilation", symbolName);
+                    var decompiledCode = await _decompilationService.DecompileSymbolAsync(symbol, cancellationToken);
+                    
+                    if (decompiledCode != null)
+                    {
+                        _logger.LogInformation("Successfully decompiled {SymbolName}", symbolName);
+                        return $"// Decompiled from metadata\n// Assembly: {symbol.ContainingAssembly?.Name}\n\n{decompiledCode}";
+                    }
+                    
+                    _logger.LogWarning("Decompilation failed for {SymbolName}", symbolName);
+                }
+                
                 _logger.LogWarning("Symbol has no declaring syntax reference: {SymbolName}", symbolName);
                 return null;
             }
