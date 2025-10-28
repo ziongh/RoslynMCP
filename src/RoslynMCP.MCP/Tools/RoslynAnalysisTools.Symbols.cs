@@ -9,6 +9,7 @@ using RoslynMCP.Analysis.Services;
 using RoslynMCP.SymbolCache.Security;
 using RoslynMCP.MCP.Services;
 using RoslynMCP.MCP.Utils;
+using RoslynMCP.MCP.Models;
 using static RoslynMCP.Analysis.Services.IAnalysisService;
 
 namespace RoslynMCP.MCP.Tools
@@ -32,6 +33,8 @@ namespace RoslynMCP.MCP.Tools
             bool excludeSystemTypes = true,
             [Description("Specifies if the search is case-sensitive. Defaults to 'true' for precision. Consider setting to 'false' when unsure of the exact casing.")]
             bool caseSensitive = true,
+            [Description("Return response as JSON instead of formatted text (default: false)")]
+            bool outputAsJson = false,
             IServiceProvider? serviceProvider = null)
         {
             try
@@ -43,7 +46,17 @@ namespace RoslynMCP.MCP.Tools
                 // Check if solution is loaded
                 if (solutionmcpServiceManager == null || !solutionmcpServiceManager.IsLoaded)
                 {
-                    return "❌ No solution loaded. Solution not loaded. Please use --solution parameter or set ROSLYN_MCP_SOLUTION_PATH environment variable to specify solution path.";
+                    var errorMsg = "❌ No solution loaded. Solution not loaded. Please use --solution parameter or set ROSLYN_MCP_SOLUTION_PATH environment variable to specify solution path.";
+                    
+                    if (outputAsJson)
+                    {
+                        return JsonResponseFormatter.ToJson(new SearchSymbolsResponse
+                        {
+                            Success = false,
+                            Error = errorMsg
+                        });
+                    }
+                    return errorMsg;
                 }
 
                 var solutionPath = solutionmcpServiceManager.CurrentSolutionPath!;
@@ -54,14 +67,34 @@ namespace RoslynMCP.MCP.Tools
                 // Validate input
                 if (string.IsNullOrWhiteSpace(pattern))
                 {
-                    return "❌ Search pattern cannot be empty.";
+                    var errorMsg = "❌ Search pattern cannot be empty.";
+                    
+                    if (outputAsJson)
+                    {
+                        return JsonResponseFormatter.ToJson(new SearchSymbolsResponse
+                        {
+                            Success = false,
+                            Error = errorMsg
+                        });
+                    }
+                    return errorMsg;
                 }
 
                 // Get query service
                 var queryService = serviceProvider?.GetService<IQueryService>();
                 if (queryService == null)
                 {
-                    return "Error: Query service not available.";
+                    var errorMsg = "Error: Query service not available.";
+                    
+                    if (outputAsJson)
+                    {
+                        return JsonResponseFormatter.ToJson(new SearchSymbolsResponse
+                        {
+                            Success = false,
+                            Error = errorMsg
+                        });
+                    }
+                    return errorMsg;
                 }
 
                 logger?.LogInformation("Searching symbols: {Pattern} in solution: {SolutionPath}", pattern, solutionPath);
@@ -70,7 +103,17 @@ namespace RoslynMCP.MCP.Tools
                 var (success, error) = await EnsureSolutionLoadedAsync(serviceProvider, logger);
                 if (!success)
                 {
-                    return $"Error: {error}";
+                    var errorMsg = $"Error: {error}";
+                    
+                    if (outputAsJson)
+                    {
+                        return JsonResponseFormatter.ToJson(new SearchSymbolsResponse
+                        {
+                            Success = false,
+                            Error = errorMsg
+                        });
+                    }
+                    return errorMsg;
                 }
 
                 // Build search request
@@ -114,6 +157,24 @@ namespace RoslynMCP.MCP.Tools
                 var resultList = filteredResults.ToList();
                 if (!resultList.Any())
                 {
+                    if (outputAsJson)
+                    {
+                        return JsonResponseFormatter.ToJson(new SearchSymbolsResponse
+                        {
+                            Success = true,
+                            Pattern = pattern,
+                            SolutionFileName = Path.GetFileName(solutionPath),
+                            SymbolTypes = symbolTypes,
+                            CaseSensitive = caseSensitive,
+                            ExcludeGeneratedFiles = excludeGeneratedFiles,
+                            ExcludeSystemTypes = excludeSystemTypes,
+                            TotalCount = 0,
+                            DisplayedCount = 0,
+                            IsTruncated = false,
+                            Results = new List<SymbolSearchResult>()
+                        });
+                    }
+                    
                     results.AppendLine("No symbols found matching the pattern.");
                     return results.ToString();
                 }
@@ -151,13 +212,42 @@ namespace RoslynMCP.MCP.Tools
                 results.AppendLine();
 
                 logger?.LogInformation("Search completed, found {Count} symbols", resultList.Count);
+                
+                if (outputAsJson)
+                {
+                    return JsonResponseFormatter.ToJson(new SearchSymbolsResponse
+                    {
+                        Success = true,
+                        Pattern = pattern,
+                        SolutionFileName = Path.GetFileName(solutionPath),
+                        SymbolTypes = symbolTypes,
+                        CaseSensitive = caseSensitive,
+                        ExcludeGeneratedFiles = excludeGeneratedFiles,
+                        ExcludeSystemTypes = excludeSystemTypes,
+                        TotalCount = totalCount,
+                        DisplayedCount = displayResults.Count,
+                        IsTruncated = totalCount > maxResults,
+                        Results = displayResults
+                    });
+                }
+                
                 return results.ToString();
             }
             catch (Exception ex)
             {
                 var logger = serviceProvider?.GetService<ILogger>();
                 logger?.LogError(ex, "Symbol search failed: {Pattern}", pattern);
-                return $"Error: An unexpected error occurred during symbol search: {ex.Message}";
+                var errorMsg = $"Error: An unexpected error occurred during symbol search: {ex.Message}";
+                
+                if (outputAsJson)
+                {
+                    return JsonResponseFormatter.ToJson(new SearchSymbolsResponse
+                    {
+                        Success = false,
+                        Error = errorMsg
+                    });
+                }
+                return errorMsg;
             }
         }
 
@@ -174,6 +264,8 @@ namespace RoslynMCP.MCP.Tools
             bool includeReferences = true,
             [Description("Include inheritance hierarchy in the response")]
             bool includeInheritanceHierarchy = true,
+            [Description("Return response as JSON instead of formatted text (default: false)")]
+            bool outputAsJson = false,
             IServiceProvider? serviceProvider = null)
         {
             try
@@ -187,14 +279,34 @@ namespace RoslynMCP.MCP.Tools
                 // Check if solution is loaded
                 if (solutionmcpServiceManager == null || !solutionmcpServiceManager.IsLoaded)
                 {
-                    return "❌ Solution not loaded. Please use --solution parameter or set ROSLYN_MCP_SOLUTION_PATH environment variable to specify solution path.";
+                    var errorMsg = "❌ Solution not loaded. Please use --solution parameter or set ROSLYN_MCP_SOLUTION_PATH environment variable to specify solution path.";
+                    
+                    if (outputAsJson)
+                    {
+                        return JsonResponseFormatter.ToJson(new GetSymbolDetailsResponse
+                        {
+                            Success = false,
+                            Error = errorMsg
+                        });
+                    }
+                    return errorMsg;
                 }
 
                 var solutionPath = solutionmcpServiceManager.CurrentSolutionPath!;
 
                 if (string.IsNullOrWhiteSpace(symbolName))
                 {
-                    return "❌ Symbol name cannot be empty.";
+                    var errorMsg = "❌ Symbol name cannot be empty.";
+                    
+                    if (outputAsJson)
+                    {
+                        return JsonResponseFormatter.ToJson(new GetSymbolDetailsResponse
+                        {
+                            Success = false,
+                            Error = errorMsg
+                        });
+                    }
+                    return errorMsg;
                 }
 
                 // Get services
@@ -202,7 +314,17 @@ namespace RoslynMCP.MCP.Tools
                 var analysisService = serviceProvider?.GetService<IAnalysisService>();
                 if (queryService == null)
                 {
-                    return "❌ Query service is not available.";
+                    var errorMsg = "❌ Query service is not available.";
+                    
+                    if (outputAsJson)
+                    {
+                        return JsonResponseFormatter.ToJson(new GetSymbolDetailsResponse
+                        {
+                            Success = false,
+                            Error = errorMsg
+                        });
+                    }
+                    return errorMsg;
                 }
 
                 logger?.LogInformation("Getting symbol details: {SymbolName}", symbolName);
@@ -211,8 +333,24 @@ namespace RoslynMCP.MCP.Tools
                 var (success, error) = await EnsureSolutionLoadedAsync(serviceProvider, logger);
                 if (!success)
                 {
-                    return $"Error: {error}";
+                    var errorMsg = $"Error: {error}";
+                    
+                    if (outputAsJson)
+                    {
+                        return JsonResponseFormatter.ToJson(new GetSymbolDetailsResponse
+                        {
+                            Success = false,
+                            Error = errorMsg
+                        });
+                    }
+                    return errorMsg;
                 }
+                
+                // Data to collect for JSON response
+                SymbolDetails? symbolDetails = null;
+                string? sourceCode = null;
+                InheritanceHierarchy? hierarchy = null;
+                List<ReferenceLocation> allReferences = new();
 
                 // Build aggregated results
                 var results = new StringBuilder();
@@ -226,7 +364,7 @@ namespace RoslynMCP.MCP.Tools
                 results.AppendLine("## 📋 Basic Information");
                 try
                 {
-                    var symbolDetails = await queryService.GetSymbolDetailsAsync(symbolName);
+                    symbolDetails = await queryService.GetSymbolDetailsAsync(symbolName);
                     if (symbolDetails != null)
                     {
                         results.AppendLine($"- **Name**: `{symbolDetails.Name}`");
@@ -270,7 +408,7 @@ namespace RoslynMCP.MCP.Tools
                     results.AppendLine("## 📄 Source Code");
                     try
                     {
-                        var sourceCode = await queryService.GetSourceCodeAsync(symbolName);
+                        sourceCode = await queryService.GetSourceCodeAsync(symbolName);
                         if (!string.IsNullOrEmpty(sourceCode))
                         {
                             results.AppendLine("```csharp");
@@ -295,7 +433,7 @@ namespace RoslynMCP.MCP.Tools
                     results.AppendLine("## 🏗️ Inheritance Hierarchy");
                     try
                     {
-                        var hierarchy = await analysisService.GetInheritanceHierarchyAsync(symbolName);
+                        hierarchy = await analysisService.GetInheritanceHierarchyAsync(symbolName);
                         if (hierarchy != null)
                         {
                             results.AppendLine("**Base class chain**:");
@@ -353,12 +491,12 @@ namespace RoslynMCP.MCP.Tools
                     try
                     {
                         var references = await queryService.FindReferencesAsync(symbolName);
-                        var allFilteredReferences = references.Where(r => !IsGeneratedFile(r.DocumentPath)).ToList();
-                        var filteredReferences = allFilteredReferences.Take(maxReferences).ToList();
+                        allReferences = references.Where(r => !IsGeneratedFile(r.DocumentPath)).ToList();
+                        var filteredReferences = allReferences.Take(maxReferences).ToList();
 
-                        if (allFilteredReferences.Any())
+                        if (allReferences.Any())
                         {
-                            var totalCount = allFilteredReferences.Count;
+                            var totalCount = allReferences.Count;
                             results.AppendLine($"Found **{totalCount}** references");
                             var refHint = ParameterUtils.GenerateTruncationHint(totalCount, maxReferences, "maxReferences", "use FindReferences tool");
                             if (!string.IsNullOrEmpty(refHint))
@@ -400,13 +538,39 @@ namespace RoslynMCP.MCP.Tools
                 results.AppendLine("- `FindReferences` - Complete reference analysis");
 
                 logger?.LogInformation("Symbol details retrieval completed: {SymbolName}", symbolName);
+                
+                if (outputAsJson)
+                {
+                    return JsonResponseFormatter.ToJson(new GetSymbolDetailsResponse
+                    {
+                        Success = true,
+                        SymbolName = symbolName,
+                        SolutionFileName = Path.GetFileName(solutionPath),
+                        AnalysisDate = DateTime.Now,
+                        BasicInfo = symbolDetails,
+                        SourceCode = includeSourceCode ? sourceCode : null,
+                        References = includeReferences ? allReferences : new List<ReferenceLocation>(),
+                        InheritanceHierarchy = includeInheritanceHierarchy ? hierarchy : null
+                    });
+                }
+                
                 return results.ToString();
             }
             catch (Exception ex)
             {
                 var logger = serviceProvider?.GetService<ILogger>();
                 logger?.LogError(ex, "Failed to get symbol details: {SymbolName}", symbolName);
-                return $"Error: An unexpected error occurred while getting symbol details: {ex.Message}";
+                var errorMsg = $"Error: An unexpected error occurred while getting symbol details: {ex.Message}";
+                
+                if (outputAsJson)
+                {
+                    return JsonResponseFormatter.ToJson(new GetSymbolDetailsResponse
+                    {
+                        Success = false,
+                        Error = errorMsg
+                    });
+                }
+                return errorMsg;
             }
         }
 

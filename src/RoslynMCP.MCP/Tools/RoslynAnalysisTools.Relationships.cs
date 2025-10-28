@@ -7,6 +7,7 @@ using RoslynMCP.Query.Services;
 using RoslynMCP.Analysis.Services;
 using RoslynMCP.MCP.Services;
 using RoslynMCP.MCP.Utils;
+using RoslynMCP.MCP.Models;
 
 namespace RoslynMCP.MCP.Tools
 {
@@ -25,6 +26,8 @@ namespace RoslynMCP.MCP.Tools
             int maxResults = 0,
             [Description("Exclude auto-generated files (*.g.cs, *.Designer.cs, etc.)")]
             bool excludeGeneratedFiles = true,
+            [Description("Return response as JSON instead of formatted text (default: false)")]
+            bool outputAsJson = false,
             IServiceProvider? serviceProvider = null)
         {
             try
@@ -137,13 +140,48 @@ namespace RoslynMCP.MCP.Tools
                 }
 
                 logger?.LogInformation("Reference search completed, found {Count} references", referenceList.Count);
+                
+                if (outputAsJson)
+                {
+                    var groupedDict = referenceList
+                        .GroupBy(r => r.DocumentPath)
+                        .ToDictionary(
+                            g => GetNormalizedPath(g.Key, solutionPath),
+                            g => g.OrderBy(r => r.LineNumber).ToList()
+                        );
+                    
+                    return JsonResponseFormatter.ToJson(new FindReferencesResponse
+                    {
+                        Success = true,
+                        SymbolName = symbolName,
+                        SolutionFileName = Path.GetFileName(solutionPath),
+                        IncludeDefinition = includeDefinition,
+                        ExcludeGeneratedFiles = excludeGeneratedFiles,
+                        TotalCount = totalReferences,
+                        DisplayedCount = referenceList.Count,
+                        IsTruncated = totalReferences > maxResults,
+                        References = referenceList,
+                        GroupedByFile = groupedDict
+                    });
+                }
+                
                 return results.ToString();
             }
             catch (Exception ex)
             {
                 var logger = serviceProvider?.GetService<ILogger>();
                 logger?.LogError(ex, "Reference search failed: {SymbolName}", symbolName);
-                return $"Error: An unexpected error occurred while finding references: {ex.Message}";
+                var errorMsg = $"Error: An unexpected error occurred while finding references: {ex.Message}";
+                
+                if (outputAsJson)
+                {
+                    return JsonResponseFormatter.ToJson(new FindReferencesResponse
+                    {
+                        Success = false,
+                        Error = errorMsg
+                    });
+                }
+                return errorMsg;
             }
         }
         
@@ -154,6 +192,8 @@ namespace RoslynMCP.MCP.Tools
         public static async Task<string> GetInheritanceHierarchy(
             [Description("The name of the symbol to analyze")]
             string symbolName,
+            [Description("Return response as JSON instead of formatted text (default: false)")]
+            bool outputAsJson = false,
             IServiceProvider? serviceProvider = null)
         {
             try
@@ -177,7 +217,28 @@ namespace RoslynMCP.MCP.Tools
 
                 if (hierarchy == null)
                 {
-                    return $"## Inheritance Hierarchy Not Found\n\nSymbol `{symbolName}` could not be analyzed.";
+                    var errorMsg = $"## Inheritance Hierarchy Not Found\n\nSymbol `{symbolName}` could not be analyzed.";
+                    
+                    if (outputAsJson)
+                    {
+                        return JsonResponseFormatter.ToJson(new GetInheritanceHierarchyResponse
+                        {
+                            Success = false,
+                            Error = errorMsg,
+                            SymbolName = symbolName
+                        });
+                    }
+                    return errorMsg;
+                }
+
+                if (outputAsJson)
+                {
+                    return JsonResponseFormatter.ToJson(new GetInheritanceHierarchyResponse
+                    {
+                        Success = true,
+                        SymbolName = symbolName,
+                        Hierarchy = hierarchy
+                    });
                 }
 
                 var results = new StringBuilder();
@@ -222,7 +283,18 @@ namespace RoslynMCP.MCP.Tools
             {
                 var logger = serviceProvider?.GetService<ILogger>();
                 logger?.LogError(ex, "Failed to get inheritance hierarchy for {SymbolName}", symbolName);
-                return $"Error: An unexpected error occurred: {ex.Message}";
+                var errorMsg = $"Error: An unexpected error occurred: {ex.Message}";
+                
+                if (outputAsJson)
+                {
+                    return JsonResponseFormatter.ToJson(new GetInheritanceHierarchyResponse
+                    {
+                        Success = false,
+                        Error = errorMsg,
+                        SymbolName = symbolName
+                    });
+                }
+                return errorMsg;
             }
         }
 
@@ -235,6 +307,8 @@ namespace RoslynMCP.MCP.Tools
             string methodName,
             [Description("Optional. The name of the project to limit the search to. Use 'ListProjects' to find project names.")]
             string? projectName = null,
+            [Description("Return response as JSON instead of formatted text (default: false)")]
+            bool outputAsJson = false,
             IServiceProvider? serviceProvider = null)
         {
             try
@@ -281,7 +355,7 @@ namespace RoslynMCP.MCP.Tools
                     return results.ToString();
                 }
 
-                // 增加对找到多个重载的提示
+                // Add a hint when multiple overloads are found
                 var methodSymbol = (await (serviceProvider?.GetService<IQueryService>()!)
                     .FindMethodSymbolsAsync(methodName, projectName))
                     .FirstOrDefault();
@@ -300,13 +374,47 @@ namespace RoslynMCP.MCP.Tools
                     results.AppendLine();
                 }
 
+                if (outputAsJson)
+                {
+                    var groupedDict = invocationList
+                        .GroupBy(i => i.ContainingType)
+                        .ToDictionary(
+                            g => g.Key,
+                            g => g.ToList()
+                        );
+                    
+                    return JsonResponseFormatter.ToJson(new GetMethodBodyInvocationsResponse
+                    {
+                        Success = true,
+                        MethodName = methodName,
+                        ProjectName = projectName,
+                        TotalCount = invocationList.Count,
+                        DisplayedCount = invocationList.Count,
+                        IsTruncated = false,
+                        Invocations = invocationList,
+                        GroupedByType = groupedDict
+                    });
+                }
+
                 return results.ToString();
             }
             catch (Exception ex)
             {
                 var logger = serviceProvider?.GetService<ILogger>();
                 logger?.LogError(ex, "Failed to get method body invocations for {MethodName}", methodName);
-                return $"Error: An unexpected error occurred: {ex.Message}";
+                var errorMsg = $"Error: An unexpected error occurred: {ex.Message}";
+                
+                if (outputAsJson)
+                {
+                    return JsonResponseFormatter.ToJson(new GetMethodBodyInvocationsResponse
+                    {
+                        Success = false,
+                        Error = errorMsg,
+                        MethodName = methodName,
+                        ProjectName = projectName
+                    });
+                }
+                return errorMsg;
             }
         }
 

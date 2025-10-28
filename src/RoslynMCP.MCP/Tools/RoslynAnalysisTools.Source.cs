@@ -5,6 +5,8 @@ using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using RoslynMCP.Query.Services;
 using RoslynMCP.MCP.Services;
+using RoslynMCP.MCP.Models;
+using RoslynMCP.MCP.Utils;
 
 namespace RoslynMCP.MCP.Tools
 {
@@ -17,6 +19,8 @@ namespace RoslynMCP.MCP.Tools
         public static async Task<string> GetSourceCode(
             [Description("Exact symbol name or fully qualified name of any symbol (e.g., 'MyClass', 'MyClass.MyMethod')")]
             string symbolName,
+            [Description("Return response as JSON instead of formatted text (default: false)")]
+            bool outputAsJson = false,
             IServiceProvider? serviceProvider = null)
         {
             try
@@ -26,30 +30,86 @@ namespace RoslynMCP.MCP.Tools
 
                 if (solutionmcpServiceManager == null || !solutionmcpServiceManager.IsLoaded)
                 {
-                    return "❌ No solution is loaded. Please use the `SwitchSolution` tool first.";
+                    var errorMsg = "❌ No solution is loaded. Please use the `SwitchSolution` tool first.";
+                    
+                    if (outputAsJson)
+                    {
+                        return JsonResponseFormatter.ToJson(new GetSourceCodeResponse
+                        {
+                            Success = false,
+                            Error = errorMsg
+                        });
+                    }
+                    return errorMsg;
                 }
 
                 var queryService = serviceProvider?.GetService<IQueryService>();
                 if (queryService == null)
                 {
-                    return "❌ Query service is not available.";
+                    var errorMsg = "❌ Query service is not available.";
+                    
+                    if (outputAsJson)
+                    {
+                        return JsonResponseFormatter.ToJson(new GetSourceCodeResponse
+                        {
+                            Success = false,
+                            Error = errorMsg
+                        });
+                    }
+                    return errorMsg;
                 }
 
                 logger?.LogInformation("Getting source code for symbol: {SymbolName}", symbolName);
                 var sourceCode = await queryService.GetSourceCodeAsync(symbolName);
+                
+                // Get symbol details to check if it's from metadata
+                var symbolDetails = await queryService.GetSymbolDetailsAsync(symbolName);
 
                 if (sourceCode == null)
                 {
-                    return $"## Source Code Not Found\n\nSymbol `{symbolName}` was not found or has no source code.";
+                    var errorMsg = $"## Source Code Not Found\n\nSymbol `{symbolName}` was not found or has no source code.";
+                    
+                    if (outputAsJson)
+                    {
+                        return JsonResponseFormatter.ToJson(new GetSourceCodeResponse
+                        {
+                            Success = false,
+                            Error = errorMsg,
+                            SymbolName = symbolName
+                        });
+                    }
+                    return errorMsg;
                 }
 
+                if (outputAsJson)
+                {
+                    return JsonResponseFormatter.ToJson(new GetSourceCodeResponse
+                    {
+                        Success = true,
+                        SymbolName = symbolName,
+                        SourceCode = sourceCode,
+                        IsFromMetadata = symbolDetails?.IsFromMetadata ?? false
+                    });
+                }
+                
                 return $"## Source Code for `{symbolName}`\n\n```csharp\n{sourceCode}\n```";
             }
             catch (Exception ex)
             {
                 var logger = serviceProvider?.GetService<ILogger>();
                 logger?.LogError(ex, "Failed to get source code for symbol: {SymbolName}", symbolName);
-                return $"Error: An unexpected error occurred: {ex.Message}";
+                var errorMsg = $"Error: An unexpected error occurred: {ex.Message}";
+                
+                if (outputAsJson)
+                {
+                    return JsonResponseFormatter.ToJson(new GetSourceCodeResponse
+                    {
+                        Success = false,
+                        Error = errorMsg,
+                        SymbolName = symbolName
+                    });
+                }
+                return errorMsg;
             }
         }
 
@@ -60,6 +120,8 @@ namespace RoslynMCP.MCP.Tools
         public static async Task<string> GetFileContent(
             [Description("Path to the file relative to the solution root directory (e.g., 'src/MyProject/MyFile.cs'). Absolute paths are not supported for security reasons.")]
             string filePath,
+            [Description("Return response as JSON instead of formatted text (default: false)")]
+            bool outputAsJson = false,
             IServiceProvider? serviceProvider = null)
         {
             try
@@ -69,13 +131,33 @@ namespace RoslynMCP.MCP.Tools
 
                 if (solutionmcpServiceManager == null || !solutionmcpServiceManager.IsLoaded)
                 {
-                    return "❌ No solution is loaded. Please use the `SwitchSolution` tool first.";
+                    var errorMsg = "❌ No solution is loaded. Please use the `SwitchSolution` tool first.";
+                    
+                    if (outputAsJson)
+                    {
+                        return JsonResponseFormatter.ToJson(new GetFileContentResponse
+                        {
+                            Success = false,
+                            Error = errorMsg
+                        });
+                    }
+                    return errorMsg;
                 }
 
                 var queryService = serviceProvider?.GetService<IQueryService>();
                 if (queryService == null)
                 {
-                    return "❌ Query service is not available.";
+                    var errorMsg = "❌ Query service is not available.";
+                    
+                    if (outputAsJson)
+                    {
+                        return JsonResponseFormatter.ToJson(new GetFileContentResponse
+                        {
+                            Success = false,
+                            Error = errorMsg
+                        });
+                    }
+                    return errorMsg;
                 }
 
                 logger?.LogInformation("Getting content for file: {FilePath}", filePath);
@@ -83,6 +165,16 @@ namespace RoslynMCP.MCP.Tools
 
                 if (fileContent == null)
                 {
+                    if (outputAsJson)
+                    {
+                        return JsonResponseFormatter.ToJson(new GetFileContentResponse
+                        {
+                            Success = false,
+                            Error = "File content not found",
+                            FilePath = filePath
+                        });
+                    }
+                    
                     var results = new StringBuilder();
                     results.AppendLine($"## 📁 File content not found");
                     results.AppendLine();
@@ -105,14 +197,41 @@ namespace RoslynMCP.MCP.Tools
                     return results.ToString();
                 }
                 
+                var fileName = Path.GetFileName(filePath);
                 var fileExtension = Path.GetExtension(filePath).TrimStart('.');
-                return $"## Content of `{Path.GetFileName(filePath)}`\n\n```{fileExtension}\n{fileContent}\n```";
+                var lineCount = fileContent.Split('\n').Length;
+                
+                if (outputAsJson)
+                {
+                    return JsonResponseFormatter.ToJson(new GetFileContentResponse
+                    {
+                        Success = true,
+                        FilePath = filePath,
+                        FileName = fileName,
+                        FileExtension = fileExtension,
+                        Content = fileContent,
+                        LineCount = lineCount
+                    });
+                }
+                
+                return $"## Content of `{fileName}`\n\n```{fileExtension}\n{fileContent}\n```";
             }
             catch (Exception ex)
             {
                 var logger = serviceProvider?.GetService<ILogger>();
                 logger?.LogError(ex, "Failed to get file content: {FilePath}", filePath);
-                return $"Error: An unexpected error occurred: {ex.Message}";
+                var errorMsg = $"Error: An unexpected error occurred: {ex.Message}";
+                
+                if (outputAsJson)
+                {
+                    return JsonResponseFormatter.ToJson(new GetFileContentResponse
+                    {
+                        Success = false,
+                        Error = errorMsg,
+                        FilePath = filePath
+                    });
+                }
+                return errorMsg;
             }
         }
     }

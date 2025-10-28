@@ -2,6 +2,31 @@
 
 Desensitized RoslynMCP service migrated out, suitable for background deployment and updates of large projects like games, serving development teams to integrate AI for efficiency improvement, without containing other subsequent more analysis features
 
+## ✨ New Feature: JSON Output for LLM Agents
+
+**All MCP tools now support JSON-formatted responses!** Perfect for LLM coding agents and automated workflows.
+
+Simply add `outputAsJson: true` to any tool call:
+```json
+{
+  "name": "SearchSymbols",
+  "arguments": {
+    "pattern": "*Service",
+    "outputAsJson": true
+  }
+}
+```
+
+**Benefits:**
+- 📊 Structured, parseable data for programmatic processing
+- 🤖 Optimized for LLM agent integration
+- 📐 Strongly-typed schemas for predictable responses
+- 🔄 Consistent format across all tools
+
+**See [JSON_OUTPUT.md](./JSON_OUTPUT.md) for complete schema documentation.**
+
+---
+
 ## 🚀 Quick Start: Connect to AI Agent
 
 We recommend using HTTP (SSE) mode to run the analysis server, which is the most stable and reliable way. This guide will guide you through the complete process from compilation to connecting to the Agent.

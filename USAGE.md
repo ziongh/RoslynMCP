@@ -1,5 +1,54 @@
 # RoslynMCP Server Usage Guide
 
+## 📊 JSON Output Support
+
+**All MCP tools now support JSON-formatted responses** for better integration with automated agents and programmatic processing.
+
+### Enabling JSON Output
+
+Add the `outputAsJson` parameter (boolean) to any tool call:
+
+```json
+{
+  "name": "SearchSymbols",
+  "arguments": {
+    "pattern": "*Service",
+    "outputAsJson": true
+  }
+}
+```
+
+### JSON Response Format
+
+All JSON responses follow a consistent structure:
+
+```typescript
+{
+  success: boolean,          // Indicates if the operation succeeded
+  error?: string,            // Error message (only present if success = false)
+  // ... tool-specific data fields
+}
+```
+
+### Benefits
+
+- **Structured Data**: Parse and process responses programmatically
+- **Type Safety**: Strongly-typed response models for predictable data structures
+- **Agent-Friendly**: Designed for LLM coding agents and automated workflows
+- **Consistent Schema**: All tools follow the same response pattern
+
+### Response Schemas
+
+**For complete JSON schema documentation for all tools, see [JSON_OUTPUT.md](./JSON_OUTPUT.md)**
+
+Each tool's JSON response is documented with TypeScript-style type definitions for clarity. The comprehensive reference includes:
+- All tool response schemas
+- Common data structures (SymbolDetails, ReferenceLocation, etc.)
+- Usage examples with request/response pairs
+- Best practices for LLM agents
+- Error handling patterns
+
+---
 
 ## 🛠️ Available Tools
 
@@ -14,12 +63,30 @@ These tools are used to manage the working environment of the analyzer.
 #### **`GetSolutionStatus`**
 Get the loading status of the current solution, service initialization information, and summary of loaded projects.
 
-*   **Parameters**: None
+*   **Parameters**: 
+    *   `waitForLoading` (bool, *optional*): Wait for loading to complete if in progress (Default: `true`)
+    *   `maxWaitMs` (int, *optional*): Maximum wait time in milliseconds (Default: `30000`)
+    *   `outputAsJson` (bool, *optional*): Return response as JSON (Default: `false`)
 *   **Example**:
     ```json
     {
       "name": "GetSolutionStatus",
-      "arguments": {}
+      "arguments": {
+        "outputAsJson": true
+      }
+    }
+    ```
+*   **JSON Response Schema**:
+    ```typescript
+    {
+      success: boolean,
+      error?: string,
+      isLoaded: boolean,
+      solutionPath?: string,
+      solutionFileName?: string,
+      projectCount: number,
+      projectNames: string[],
+      status: string  // Human-readable status message
     }
     ```
 
@@ -34,12 +101,24 @@ Reload the current solution from disk, refreshing all cached symbols. **Use this
     *   After refactoring that changes method signatures or inheritance
     *   When line numbers or references seem stale or incorrect
 *   **Performance**: May take 30 seconds to 2 minutes for large solutions
-*   **Parameters**: None
+*   **Parameters**:
+    *   `outputAsJson` (bool, *optional*): Return response as JSON (Default: `false`)
 *   **Example**:
     ```json
     {
       "name": "ReloadSolution",
-      "arguments": {}
+      "arguments": {
+        "outputAsJson": true
+      }
+    }
+    ```
+*   **JSON Response Schema**:
+    ```typescript
+    {
+      success: boolean,
+      error?: string,
+      message: string,
+      duration?: string  // Time taken (e.g., "00:01:23.456")
     }
     ```
 
@@ -56,13 +135,26 @@ Notify the server that specific code files have been modified, triggering a fast
 *   **Performance**: 2-5 seconds for most changes
 *   **Parameters**:
     *   `changedFiles` (string array, **required**): File paths that have been modified. Can be absolute paths or relative to solution root.
+    *   `outputAsJson` (bool, *optional*): Return response as JSON (Default: `false`)
 *   **Example**:
     ```json
     {
       "name": "NotifyCodeChanges",
       "arguments": {
-        "changedFiles": ["src/MyProject/Services/UserService.cs", "src/MyProject/Models/User.cs"]
+        "changedFiles": ["src/MyProject/Services/UserService.cs", "src/MyProject/Models/User.cs"],
+        "outputAsJson": true
       }
+    }
+    ```
+*   **JSON Response Schema**:
+    ```typescript
+    {
+      success: boolean,
+      error?: string,
+      message: string,
+      filesUpdated: number,
+      updatedFiles: string[],  // Normalized relative paths
+      duration?: string
     }
     ```
 
@@ -84,14 +176,45 @@ Search for symbols in C# code using wildcards (`*`, `?`).
     *   `excludeGeneratedFiles` (bool, *optional*): Whether to exclude automatically generated files (Default: `true`).
     *   `excludeSystemTypes` (bool, *optional*): Whether to exclude system types, such as constructors (Default: `true`).
     *   `caseSensitive` (bool, *optional*): Whether search is case-sensitive (Default: `true`).
+    *   `outputAsJson` (bool, *optional*): Return response as JSON (Default: `false`)
 *   **Example**:
     ```json
     {
       "name": "SearchSymbols",
       "arguments": {
         "pattern": "I*Repository",
-        "symbolTypes": "interface"
+        "symbolTypes": "interface",
+        "outputAsJson": true
       }
+    }
+    ```
+*   **JSON Response Schema**:
+    ```typescript
+    {
+      success: boolean,
+      error?: string,
+      pattern: string,
+      solutionFileName: string,
+      symbolTypes: string,
+      caseSensitive: boolean,
+      excludeGeneratedFiles: boolean,
+      excludeSystemTypes: boolean,
+      totalCount: number,
+      displayedCount: number,
+      isTruncated: boolean,
+      results: Array<{
+        name: string,
+        fullName: string,
+        category: string,
+        location: string,
+        projectName: string,
+        filePath: string,
+        lineNumber: number,
+        summary: string,
+        accessibility: string,
+        symbolKind: string,
+        namespace: string
+      }>
     }
     ```
 

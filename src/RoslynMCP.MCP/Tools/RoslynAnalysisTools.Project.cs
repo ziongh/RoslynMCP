@@ -8,6 +8,7 @@ using RoslynMCP.Query.Services;
 using RoslynMCP.Analysis.Services;
 using RoslynMCP.MCP.Services;
 using RoslynMCP.MCP.Utils;
+using RoslynMCP.MCP.Models;
 
 namespace RoslynMCP.MCP.Tools
 {
@@ -24,6 +25,8 @@ namespace RoslynMCP.MCP.Tools
             int maxPackages = 5,
             [Description("Whether to show system packages in the detailed view.")]
             bool showSystemPackages = false,
+            [Description("Return response as JSON instead of formatted text (default: false)")]
+            bool outputAsJson = false,
             IServiceProvider? serviceProvider = null)
         {
             try
@@ -104,13 +107,36 @@ namespace RoslynMCP.MCP.Tools
                     results.AppendLine($"*Showing first {maxProjects} of {totalProjects} projects. Use `maxProjects: -1` to show all.*");
                 }
 
+                if (outputAsJson)
+                {
+                    return JsonResponseFormatter.ToJson(new ListProjectsResponse
+                    {
+                        Success = true,
+                        SolutionFileName = Path.GetFileName(solutionmcpServiceManager.CurrentSolutionPath!),
+                        TotalProjectCount = totalProjects,
+                        DisplayedProjectCount = projectsToShow.Count,
+                        IsTruncated = totalProjects > maxProjects && maxProjects > 0,
+                        Projects = projectsToShow
+                    });
+                }
+
                 return results.ToString();
             }
             catch (Exception ex)
             {
                 var logger = serviceProvider?.GetService<ILogger>();
                 logger?.LogError(ex, "Failed to list projects");
-                return $"Error: An unexpected error occurred: {ex.Message}";
+                var errorMsg = $"Error: An unexpected error occurred: {ex.Message}";
+                
+                if (outputAsJson)
+                {
+                    return JsonResponseFormatter.ToJson(new ListProjectsResponse
+                    {
+                        Success = false,
+                        Error = errorMsg
+                    });
+                }
+                return errorMsg;
             }
         }
 
@@ -121,6 +147,8 @@ namespace RoslynMCP.MCP.Tools
         public static async Task<string> GetProjectDependencies(
             [Description("The name of the project to analyze")]
             string projectName,
+            [Description("Return response as JSON instead of formatted text (default: false)")]
+            bool outputAsJson = false,
             IServiceProvider? serviceProvider = null)
         {
             try
@@ -144,7 +172,28 @@ namespace RoslynMCP.MCP.Tools
 
                 if (project == null)
                 {
-                    return $"## Project Not Found\n\nProject `{projectName}` could not be found in the solution.";
+                    var errorMsg = $"## Project Not Found\n\nProject `{projectName}` could not be found in the solution.";
+                    
+                    if (outputAsJson)
+                    {
+                        return JsonResponseFormatter.ToJson(new GetProjectDependenciesResponse
+                        {
+                            Success = false,
+                            Error = errorMsg,
+                            ProjectName = projectName
+                        });
+                    }
+                    return errorMsg;
+                }
+
+                if (outputAsJson)
+                {
+                    return JsonResponseFormatter.ToJson(new GetProjectDependenciesResponse
+                    {
+                        Success = true,
+                        ProjectName = projectName,
+                        Project = project
+                    });
                 }
 
                 var results = new StringBuilder();
@@ -186,7 +235,18 @@ namespace RoslynMCP.MCP.Tools
             {
                 var logger = serviceProvider?.GetService<ILogger>();
                 logger?.LogError(ex, "Failed to get project dependencies for {ProjectName}", projectName);
-                return $"Error: An unexpected error occurred: {ex.Message}";
+                var errorMsg = $"Error: An unexpected error occurred: {ex.Message}";
+                
+                if (outputAsJson)
+                {
+                    return JsonResponseFormatter.ToJson(new GetProjectDependenciesResponse
+                    {
+                        Success = false,
+                        Error = errorMsg,
+                        ProjectName = projectName
+                    });
+                }
+                return errorMsg;
             }
         }
     }
